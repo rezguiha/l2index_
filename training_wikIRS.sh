@@ -13,6 +13,6 @@ INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIRS_indexed/indexed_coll
 
 for MODEL in tf_idf DIR BM25 JM
 do
-    python training_wikir_collection.py -c ${COLLPATH} -i $INDEXPATH -p ${COLLPATH}plots -r ${COLLPATH}results -w ${COLLPATH}weights -e 100 -l ${L1} -n ${COLL}_${MODEL}_${L1}_${DROPOUT} --lr 2e-4 -d ${DROPOUT}  --IR_model ${MODEL} > ${COLLPATH}stdout/${MODEL}_${L1}_${DROPOUT} 2> ${COLLPATH}stderr/${MODEL}_${L1}_${DROPOUT} &
+    python training_wikir_collection.py -c ${COLLPATH} -i $INDEXPATH -p ${COLLPATH}plots -r ${COLLPATH}results -w ${COLLPATH}weights -e 100 -l ${L1} -n ${COLL}_${MODEL}_${L1}_${DROPOUT} --lr $LR -d ${DROPOUT}  --IR_model ${MODEL} > ${COLLPATH}stdout/${MODEL}_${L1}_${DROPOUT} 2> ${COLLPATH}stderr/${MODEL}_${L1}_${DROPOUT} &
 done
 mail -s "training_on_wikIRS_collection" hamdi.rezgui1993@gmail.com <<< "finished"

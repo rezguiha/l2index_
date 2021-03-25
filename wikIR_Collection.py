@@ -181,7 +181,7 @@ class Collection:
         self.validation_queries = None
         self.test_queries = None
         with open(path, 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def compute_fasttext_embedding(self, model_path):
         """Function that computes the fasttext embedding : vectos of 300 dimension"""

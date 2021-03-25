@@ -284,7 +284,7 @@ class diff_JM(Model):
         d_length = tf.math.reduce_sum(d, axis=0)
 
 
-        jm_d = tf.math.log(1+(self.lamb/(1-self.lamb))*(1/d_length)*(d/tf.reshape(cfreq(-1,1))))
+        jm_d = tf.math.log(1+(self.lamb/(1-self.lamb))*(1/d_length)*(d/tf.reshape(cfreq,(-1,1))))
 
         rel = tf.math.reduce_sum(tf.math.multiply(q, jm_d), axis=0)
 

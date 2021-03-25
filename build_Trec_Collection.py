@@ -8,17 +8,17 @@ def main():
     parser.add_argument('-i', '--index_path', nargs="?", type=str)
     parser.add_argument('-f', '--fasttext_path', nargs="?", type=str)
     parser.add_argument('-l', '--language', nargs="?", type=str, default='english')
-    parser.add_argument('-b', '--build_folds_preprocess', nargs="?", type=str, default=False)
+    parser.add_argument('-b', '--build_folds_preprocess', nargs="?", type=bool, default=False)
 
     args = parser.parse_args()
-    print(args.parse_args())
+    print(args)
 
     print('-----------------start--------------',flush=True)
     # Set to True only if the collection haven't been processed by creating folds containing documents
     # , queries and qrels for each fold and creating csv files from Xml format
     if args.build_folds_preprocess:
         print("Creating folds for the K-fold cross validation and preprocessing",flush=True)
-        Trec_Collection.read_collection()
+        Trec_Collection.read_collection(args.coll_path)
 
     print("Loading collection (documents ,folds queries and qrels and folds training qrels",flush=True)
     Collection = TrecCollection(k=5)

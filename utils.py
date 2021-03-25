@@ -1,3 +1,4 @@
+import os
 import json
 import pickle
 import random
@@ -667,7 +668,7 @@ def eval_learned_index_trec(coll_path,
 #         plot_values['weighted_BM25'][1].append(metrics)
 
     if IR_model == 'JM':
-        Lambda=model.Lambda.numpy()
+        lamb=model.lamb.numpy()
 
         print('JM')
 
@@ -675,7 +676,7 @@ def eval_learned_index_trec(coll_path,
                              inverted_index,
                              redefined_docs_length,
                              redefined_idf,
-                             Lambda)
+                             lamb)
 
         if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/'):
             os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/')
@@ -697,7 +698,7 @@ def eval_learned_index_trec(coll_path,
 #                                       weights,
 #                                       redefined_docs_length,
 #                                       redefined_idf,
-#                                       Lambda)
+#                                       lamb)
 
 #         if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/weighted_JM/'):
 #             os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/weighted_JM/')
@@ -919,7 +920,7 @@ def eval_learned_index_wikir(coll_path,
 
 
     if IR_model == 'JM':
-        Lambda=model.Lambda.numpy()
+        lamb=model.lamb.numpy()
 
         print('JM')
         #validation
@@ -927,7 +928,7 @@ def eval_learned_index_wikir(coll_path,
                              inverted_index,
                              redefined_docs_length,
                              redefined_idf,
-                             Lambda)
+                             lamb)
 
         if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
             os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
@@ -947,7 +948,7 @@ def eval_learned_index_wikir(coll_path,
                              inverted_index,
                              redefined_docs_length,
                              redefined_idf,
-                             Lambda)
+                             lamb)
 
         if not os.path.exists(results_path + '/test/' +  experiment_name + '/JM/'):
             os.makedirs(results_path + '/test/' +  experiment_name + '/JM/')

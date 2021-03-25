@@ -27,7 +27,8 @@ def main():
     parser.add_argument('-n', '--experiment_name', nargs="?", type=str)
     parser.add_argument('-u', '--update_embeddings', action="store_true")
     parser.add_argument('--IR_model', nargs="?", type=str, default='tf')
-
+    parser.add_argument('--lr', nargs="?", type=float)
+    parser.add_argument('-d', '--dropout_rate', nargs="?", type=float, default=0.0)
     args = parser.parse_args()
 
     print(args, flush=True)
@@ -61,7 +62,7 @@ def main():
 
     #Loading indexed collection
 
-    Collection = WikIRCollection.Collection()
+    Collection = wikIR_Collection.Collection()
     with open(args.indexed_path, 'rb') as f:
         Collection = pickle.load(f)
 
@@ -97,7 +98,7 @@ def main():
     batch_size = 64
     y_true = tf.ones(batch_size, )
     loss_function = tf.keras.losses.Hinge()
-    optimizer = tf.keras.optimizers.Adam()
+    optimizer = tf.keras.optimizers.Adam(args.lr)
     #Loading the differentiable model used for the training
     if args.IR_model == 'tf':
         model = differentiable_models.diff_simple_TF(Collection.embedding_matrix, dropout_rate=args.dropout_rate)

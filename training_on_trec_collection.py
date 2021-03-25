@@ -35,6 +35,9 @@ import utils
 #### Training and getting results for Trec collection####
 
 def main():
+    #enabling eager execution of tensorflow. It is enabled in version 2 but not in version1
+    tf.enable_eager_execution()
+    #parsing arguments 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--coll_path', nargs="?", type=str)
     parser.add_argument('-i', '--indexed_path', nargs="?", type=str)
@@ -54,7 +57,6 @@ def main():
 
     print(args, flush=True)
 
-
     # Loading indexed collection
     Collection = TrecCollection()
     with open(args.indexed_path, 'rb') as f:
@@ -67,8 +69,15 @@ def main():
         qrel = pytrec_eval.parse_qrel(f_qrel)
     # ????
     id_titl = Collection.vocabulary['titl']
+    
+    print("length of all_indexed_queries ",len(Collection.all_indexed_queries), flush=True)
+    print("first five elements of all_indexed_queries ",Collection.all_indexed_queries[:5],flush=True)
+    
     for i in range(len(Collection.all_indexed_queries)):
+        print(" counter i ", i,flush=True)
+        print(" indexed query i", Collection.all_indexed_queries[i],flush=True)
         if Collection.all_indexed_queries[i][0] == id_titl and len(Collection.all_indexed_queries[i]) > 1:
+            print("found it at ", i," ", Collection.all_indexed_queries[i][0])
             del Collection.all_indexed_queries[i][0]
 
     for i in range(len(Collection.indexed_queries)):
@@ -79,7 +88,7 @@ def main():
     print('---------------------start-------------------',flush=True)
     # Getting collection vocabulary size and total number of elements in collection
     coll_vocab_size, coll_tot_nb_elem = utils.evaluate_inverted_index(Collection.inverted_index)
-    # Creating for each fold and for every model a directory for results,weights and plots data
+    # Creating for each fold and for a certain experiment a directory for results,weights and plots data
 
 
     for fold in range(args.folds):
@@ -93,14 +102,14 @@ def main():
             plot_values[model_name] = [[], []]
 
         if not os.path.exists(args.results_path + '/fold' + str(fold) + '/' + args.experiment_name):
-            os.makedirs(results_path + '/fold' + str(fold) + '/' + args.experiment_name)
+            os.makedirs(args.results_path + '/fold' + str(fold) + '/' + args.experiment_name)
 
         if not os.path.exists(args.weights_path + '/fold' + str(fold) + '/' + args.experiment_name):
-            os.makedirs(weights_path + '/fold' + str(fold) + '/' + args.experiment_name)
+            os.makedirs(args.weights_path + '/fold' + str(fold) + '/' + args.experiment_name)
 
         if not os.path.exists(args.plot_path + '/fold' + str(fold) + '/'):
-            os.makedirs(plot_path + '/fold' + str(fold) + '/')
-        # Computing metrics for a certain model and a certain fold and updating plot_values dictionnary
+            os.makedirs(args.plot_path + '/fold' + str(fold) + '/')
+        # Computing metrics for baseline models for a certain fold and updating plot_values dictionnary
         utils.eval_baseline_index_trec(args.coll_path,
                             Collection,
                             fold,
@@ -202,7 +211,7 @@ def main():
             weights = model.compute_index()
 
             pickle.dump(weights, open(
-                args.weights_path + '/fold' + str(fold) + '/' +  experiment_name + '/epoch_' + str(epoch), 'wb'))
+                args.weights_path + '/fold' + str(fold) + '/' +  args.experiment_name + '/epoch_' + str(epoch), 'wb'))
 
             inverted_index, redefined_idf, redefined_docs_length, redefined_c_freq = utils.utils_compute_info_retrieval(
                 Collection,

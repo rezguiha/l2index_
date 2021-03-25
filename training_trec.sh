@@ -2,7 +2,7 @@ source activate python3.7
 
 NB_EPOC=100
 L1_WEIGHT=1e-5
-DROPOUT_RATE=0.0
+DROPOUT=0.0
 FOLDS=5
 LR=1e-3
 FASTTEXT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/fastText/cc.en.300.bin

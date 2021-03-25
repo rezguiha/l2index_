@@ -296,7 +296,7 @@ class TrecCollection:
         self.documents = None
         self.folds_queries = None
         with open(path, 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def compute_fasttext_embedding(self, model_path):
         """Function that computes the embedding matrix using the fasttext embedding: vectors of length
