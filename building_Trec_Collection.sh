@@ -1,3 +1,9 @@
+# =============================================================================
+# Created By  : Hamdi REZGUI
+# Created Date: March 23 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Script to index TREC collections
+# =============================================================================
 source activate python3.7
 LANGUAGE=en
 FASTTEXT_PATH=/home/mrim/data/embeddings/cc.${LANGUAGE}.300.bin

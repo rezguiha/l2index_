@@ -1,3 +1,9 @@
+# =============================================================================
+# Created By  : Hamdi REZGUI
+# Created Date: March 21 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Script to train the classical IR models on the 3 TREC collections
+# =============================================================================
 source activate python3.7
 
 NB_EPOC=100

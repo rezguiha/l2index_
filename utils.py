@@ -1,3 +1,12 @@
+# =============================================================================
+# Created By  : Jibril FREJJ
+# Created Date: February 16 2020
+# Modified By  : Hamdi REZGUI
+# Modified Date: March 21 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Definition of the classes of differentiable IR models with their 
+# network architecture
+# =============================================================================
 import os
 import json
 import pickle
@@ -10,9 +19,9 @@ from collections import Counter
 
 import baseline_models_and_tdv_implementation
 
-####Useful functions for reading qrel files when you are loading the collection
+####Useful functions for reading qrel files when you are loading the collection #HR
 def read_qrels(path):
-    """Reads qrel files for both Wikir and Trec collection"""
+    """Reads qrel files for both Wikir and Trec collection""" #HR
     qrels = []
     with open(path,'r') as f:
         for line in f:
@@ -21,7 +30,7 @@ def read_qrels(path):
     return qrels
 
 def read_trec_train_qrels(path):
-    """read qrel files for trec collection for training and build dictionnary containing qrels for positive documents and negative documents"""
+    """read qrel files for trec collection for training and build dictionnary containing qrels for positive documents and negative documents""" #HR
     pos_qrels = []
     neg_qrels = dict()
     with open(path,'r') as f:
@@ -43,10 +52,10 @@ def read_trec_train_qrels(path):
 
 
 ####Useful functions for after computation of TDV weights by training models to update inverted index, compute some properties like idf,evaluate performance
-### of baseline models and their associated TDV implementation
+### of baseline models and their associated TDV implementation  #HR
 
 def build_inverted_index(Collection, weights):
-    """Function that updates the inverted index of a collection by erasing the tokens that have 0 as TDV and multiply the rest by their TDV weight"""
+    """Function that updates the inverted index of a collection by erasing the tokens that have 0 as TDV and multiply the rest by their TDV weight""" #HR
     inverted_index = dict()
     for key, value in Collection.inverted_index.items():
         if weights[key] == 0:
@@ -58,7 +67,7 @@ def build_inverted_index(Collection, weights):
 
 
 def compute_idf(Collection, inverted_index, weights=None):
-    """Functions that compute the idf with or without introduction of TDV"""
+    """Functions that compute the idf with or without introduction of TDV""" #HR
     nb_docs = len(Collection.doc_index)
     if weights is None:
         return {token: np.log((nb_docs + 1) / (1 + len(inverted_index[token]))) for token in inverted_index}
@@ -71,7 +80,7 @@ def compute_idf(Collection, inverted_index, weights=None):
     # Here in the following function we give the weights when we want the docslengths to be the number of occurence
     # the weights are here for regularization purposes
 def compute_docs_length(inverted_index, weights=None):
-    """Function that computes document length with TDV or without it"""
+    """Function that computes document length with TDV or without it""" #HR
     docs_length = Counter()
 
     if weights is None:
@@ -88,13 +97,13 @@ def compute_docs_length(inverted_index, weights=None):
 
 
 def compute_collection_frequencies(docs_length, inverted_index):
-    """Function that computes frequency of tokens in a  collection"""
+    """Function that computes frequency of tokens in a  collection""" #HR
     coll_length = sum([value for key, value in docs_length.items()])
     return {token: sum([freq for _, freq in inverted_index[token].items()]) / coll_length for token in inverted_index}
 
 
 def evaluate_inverted_index(inverted_index):
-    """Function that takes an inverted index and calculate its vocabulary size and total number of elements"""
+    """Function that takes an inverted index and calculate its vocabulary size and total number of elements""" #HR
     vocab_size = len(inverted_index)
     tot_nb_elem = 0
     for key, value in inverted_index.items():
@@ -105,7 +114,7 @@ def evaluate_inverted_index(inverted_index):
 def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_name, save_res=True):
     """Function that saves the results of retrieval: the top_k documents according to their score for
     a certain model identified by model_name. Then, it computes different metrics for IR using the pytrec_eval
-    package"""
+    package""" #HR
     Collection.save_results(queries_index, results, model_name, top_k=1000)
 
     with open(model_name, 'r') as f_run:
@@ -138,7 +147,7 @@ def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_n
 
 
 def utils_compute_info_retrieval(Collection, weights, weighted=True):
-    """Computes inverted index, idf, document length and c_frequency for a collection with TDV weights"""
+    """Computes inverted index, idf, document length and c_frequency for a collection with TDV weights""" #HR
     inverted_index = build_inverted_index(Collection, weights)
     if weighted:
         idf = compute_idf(Collection, inverted_index, weights)
@@ -151,7 +160,7 @@ def utils_compute_info_retrieval(Collection, weights, weighted=True):
     return inverted_index, idf, docs_length, c_freq
 
 
-
+# HR added this function to evaluate baseline models on TREC. It is a modified version of eval_baseline_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
 def eval_baseline_index_trec(coll_path,
                         Collection,
                         fold,
@@ -161,7 +170,7 @@ def eval_baseline_index_trec(coll_path,
                         experiment_name,
                         epoch):
     """This function computes the metrics for the baseline models for term matching methods and
-    updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """
+    updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
     print('tf')
 
     results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_queries[fold],
@@ -244,7 +253,7 @@ def eval_baseline_index_trec(coll_path,
     results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_queries[fold],
                          Collection.inverted_index,
                          Collection.docs_length,
-                         Collection.idf)
+                         Collection.c_freq)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/')
@@ -256,12 +265,12 @@ def eval_baseline_index_trec(coll_path,
                               results,
                               results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/' + str(epoch))
 
-    plot_values['BM25'][0].append(1.0)
-    plot_values['BM25'][1].append(metrics)
+    plot_values['JM'][0].append(1.0)
+    plot_values['JM'][1].append(metrics)
 
 
     
-    
+    # HR added this function to evaluate baseline models on wikIR collections. It is a modified version of eval_baseline_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too
 def eval_baseline_index_wikir(coll_path,
                         Collection,
                         validation_qrel,
@@ -272,7 +281,7 @@ def eval_baseline_index_wikir(coll_path,
                         experiment_name,
                         epoch):
     """This function computes the metrics for the baseline models for term matching methods and
-    updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """
+    updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
     print('tf')
     #validation
     results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_validation_queries,
@@ -362,7 +371,7 @@ def eval_baseline_index_wikir(coll_path,
                               results_path + '/validation/' + experiment_name + '/DIR/' + str(epoch))
 
     validation_plot_values['DIR'][0].append(1.0)
-    validation.plot_values['DIR'][1].append(metrics)
+    validation_plot_values['DIR'][1].append(metrics)
 
     #test
     
@@ -382,7 +391,7 @@ def eval_baseline_index_wikir(coll_path,
                               results_path + '/test/' + experiment_name + '/DIR/' + str(epoch))
 
     test_plot_values['DIR'][0].append(1.0)
-    test.plot_values['DIR'][1].append(metrics)
+    test_plot_values['DIR'][1].append(metrics)
     
     print('BM25')
     #validation
@@ -402,7 +411,7 @@ def eval_baseline_index_wikir(coll_path,
                               results_path + '/validation/' +  experiment_name + '/BM25/' + str(epoch))
 
     validation_plot_values['BM25'][0].append(1.0)
-    validation.plot_values['BM25'][1].append(metrics)
+    validation_plot_values['BM25'][1].append(metrics)
     
     #test
     results = baseline_models_and_tdv_implementation.Okapi_BM25(Collection.indexed_test_queries,
@@ -420,8 +429,8 @@ def eval_baseline_index_wikir(coll_path,
                               results,
                               results_path + '/test/' +  experiment_name + '/BM25/' + str(epoch))
 
-    validation_plot_values['BM25'][0].append(1.0)
-    validation.plot_values['BM25'][1].append(metrics)
+    test_plot_values['BM25'][0].append(1.0)
+    test_plot_values['BM25'][1].append(metrics)
     
     print('JM')
     #validation
@@ -429,7 +438,7 @@ def eval_baseline_index_wikir(coll_path,
     results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_validation_queries,
                          Collection.inverted_index,
                          Collection.docs_length,
-                         Collection.idf)
+                         Collection.c_freq)
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
@@ -441,14 +450,14 @@ def eval_baseline_index_wikir(coll_path,
                               results,
                               results_path + '/validation/' +  experiment_name + '/JM/' + str(epoch))
 
-    validation_plot_values['BM25'][0].append(1.0)
-    validation_plot_values['BM25'][1].append(metrics)
+    validation_plot_values['JM'][0].append(1.0)
+    validation_plot_values['JM'][1].append(metrics)
 
     #test
     results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_test_queries,
                          Collection.inverted_index,
                          Collection.docs_length,
-                         Collection.idf)
+                         Collection.c_freq)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/JM/')
@@ -460,9 +469,10 @@ def eval_baseline_index_wikir(coll_path,
                               results,
                               results_path + '/test/' +  experiment_name + '/JM/' + str(epoch))
 
-    test_plot_values['BM25'][0].append(1.0)
-    test_plot_values['BM25'][1].append(metrics)
+    test_plot_values['JM'][0].append(1.0)
+    test_plot_values['JM'][1].append(metrics)
 
+    # HR added this function to evaluate baseline models on TREC after training to get the TDV weights. It is a modified version of eval_learned_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
 def eval_learned_index_trec(coll_path,
                        Collection,
                        IR_model,
@@ -484,7 +494,7 @@ def eval_learned_index_trec(coll_path,
                        experiment_name,
                        epoch):
     """Evaluate the performance of baseline models and their corresponding weighted (TDV) versions and saves the results in a pickle object file
-    This is is to be used after training the neural model (calculating the TDV weights of terms) """
+    This is is to be used after training the neural model (calculating the TDV weights of terms) """ #HR
 
     if IR_model == 'tf':
 
@@ -675,7 +685,7 @@ def eval_learned_index_trec(coll_path,
         results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_queries[fold],
                              inverted_index,
                              redefined_docs_length,
-                             redefined_idf,
+                             redefined_c_freq,
                              lamb)
 
         if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/'):
@@ -697,7 +707,7 @@ def eval_learned_index_trec(coll_path,
 #                                       inverted_index,
 #                                       weights,
 #                                       redefined_docs_length,
-#                                       redefined_idf,
+#                                       redefined_c_freq,
 #                                       lamb)
 
 #         if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/weighted_JM/'):
@@ -717,7 +727,7 @@ def eval_learned_index_trec(coll_path,
 
     pickle.dump(plot_values, open(plot_path + '/fold' + str(fold) + '/' +  experiment_name, 'wb'))
 
-    
+    # HR added this function to evaluate baseline models on TREC after training to get the TDV weights. It is a modified version of eval_learned_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
     
 def eval_learned_index_wikir(coll_path,
                        Collection,
@@ -740,7 +750,7 @@ def eval_learned_index_wikir(coll_path,
                        experiment_name,
                        epoch):
     """Evaluate the performance of baseline models and their corresponding weighted (TDV) versions and saves the results in a pickle object file
-    This is is to be used after training the neural model (calculating the TDV weights of terms) """
+    This is is to be used after training the neural model (calculating the TDV weights of terms) """ #HR
 
     if IR_model == 'tf':
 
@@ -927,7 +937,7 @@ def eval_learned_index_wikir(coll_path,
         results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_validation_queries,
                              inverted_index,
                              redefined_docs_length,
-                             redefined_idf,
+                             redefined_c_freq,
                              lamb)
 
         if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
@@ -947,7 +957,7 @@ def eval_learned_index_wikir(coll_path,
         results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_test_queries,
                              inverted_index,
                              redefined_docs_length,
-                             redefined_idf,
+                             redefined_c_freq,
                              lamb)
 
         if not os.path.exists(results_path + '/test/' +  experiment_name + '/JM/'):

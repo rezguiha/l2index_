@@ -1,10 +1,21 @@
+# =============================================================================
+# Created By  : Jibril FREJJ
+# Created Date: February 10 2020
+# Modified By  : Hamdi REZGUI
+# Modified Date: March 16 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Definition of useful functions to build vocabulary and index 
+# queries and documents of collections. 
+# HR modified the name of the functions by adding prefix std_tokenizer because
+# there are functions of the same name in other code files
+# =============================================================================
 from collections import Counter
 from nltk.corpus import stopwords
 
 
 def std_tokenizer_build_standard_vocabulary(queries, documents, min_occ=2, limit_docs=None, limit_queries=None):
     """Function that builds the standard vocabulary from a list of queries and a list of documents and
-    with a limit on the number of documents and queries to manipulate"""
+    with a limit on the number of documents and queries to manipulate""" #HR
     vocabulary = Counter()
 
     count = 0
@@ -33,7 +44,7 @@ def std_tokenizer_build_standard_vocabulary(queries, documents, min_occ=2, limit
 
 def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
     """Function that indexes a dataframe either documents or queries for example according to a vocabulary.
-    While doing that it can perform a stemmerization if the vocabulary was built on words that got stemmerized"""
+    While doing that it can perform a stemmerization if the vocabulary was built on words that got stemmerized""" #HR
     indexed_elements = []
     index = dict()
     count = 0
@@ -57,7 +68,7 @@ def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
 
 
 def std_tokenizer_index_dict(pdDataFrame, vocabulary):
-    """Function that indexes a dict that could be documents or queries for example according to a vocabulary"""
+    """Function that indexes a dict that could be documents or queries for example according to a vocabulary""" #HR
     indexed_elements = []
     index = dict()
     count = 0
@@ -69,10 +80,10 @@ def std_tokenizer_index_dict(pdDataFrame, vocabulary):
     return index, indexed_elements
 
 
-def std_tokenizer_preprocess(queries, documents, min_occ=5):
+def std_tokenizer_preprocess(queries, documents, min_occ=5): 
     """Function that preprocesses queries and documents. It builds the standard vocabulary and indexes both
     the documents and the queries and returns the vocabulary , the query and doc index and the indexed elements of
-    both doc and  query"""
+    both doc and  query""" #HR
     vocabulary = std_tokenizer_build_standard_vocabulary(queries,
                                                          documents,
                                                          min_occ=min_occ)

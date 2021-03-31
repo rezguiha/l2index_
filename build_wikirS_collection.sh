@@ -1,3 +1,10 @@
+# =============================================================================
+# Created By  : Hamdi REZGUI
+# Created Date: March 19 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Script to index WikIRS collection
+# =============================================================================
+
 source activate /home/mrim/rezguiha/anaconda3/envs/python3.7
 
 

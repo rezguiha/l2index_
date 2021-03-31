@@ -1,3 +1,12 @@
+# =============================================================================
+# Created By  : Jibril FREJJ
+# Created Date: April 13 2020
+# Modified By  : Hamdi REZGUI
+# Modified Date: March 23 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Definition of some global methods and the TREC definition class 
+# with its internal methods
+# =============================================================================
 import os
 import pickle
 import random
@@ -13,10 +22,10 @@ from nltk.corpus import stopwords
 
 import std_tokenizer
 import utils
-####Useful methods for trec collection and trec collection class definition####
+####Useful methods for trec collection and trec collection class definition#### HR
 
 def build_folds(queries_ids, k=5):
-    """Builds folds for the K-fold cross validation"""
+    """Builds folds for the K-fold cross validation """ #HR
     nb_queries = len(queries_ids)
     nb_elem = int(nb_queries / k)
     random.shuffle(queries_ids)
@@ -28,7 +37,7 @@ def build_folds(queries_ids, k=5):
 
 def read_queries(queries_path):
     """ Function that reads the queries from a path of the file containing those queries. It returns  dict of
-    query ids and query texts"""
+    query ids and query texts""" #HR
     queries_ids = []
     queries_text = []
     with open(queries_path, 'r') as f:
@@ -43,7 +52,7 @@ def read_queries(queries_path):
 
 
 def read_documents(documents_path):
-    """Same function but for documents"""
+    """Same function but for documents""" #HR
     doc_ids = []
     doc_text = ['']
     fill_text = False
@@ -72,7 +81,7 @@ def read_documents(documents_path):
 
 
 def save_qrel(path, qrels, subset):
-    """Function that saves query document relavence scores into a file."""
+    """Function that saves query document relavence scores into a file.""" #HR
     with open(path, 'w') as f:
         for query in subset:
             for doc, rel in qrels[str(query)].items():
@@ -80,7 +89,7 @@ def save_qrel(path, qrels, subset):
 
 
 def save_queries_csv(coll_path, queries, folds):
-    """Function that saves folds of queries into csv files for each fold"""
+    """Function that saves folds of queries into csv files for each fold""" #HR
     for i, elem in enumerate(folds):
         index = pd.Index([key for key in elem], name='id_left')
         d = {"text_left": [queries[key] for key in elem]}
@@ -88,16 +97,17 @@ def save_queries_csv(coll_path, queries, folds):
 
 
 def save_documents_csv(coll_path, documents):
-    """Function that saves documents into a csv file"""
+    """Function that saves documents into a csv file""" #HR
     index = pd.Index([key for key in documents], name='id_right')
     d = {"text_right": [documents[key] for key in documents]}
     pd.DataFrame(data=d, index=index).to_csv(coll_path + '/documents.csv')
 
-
+#This function has been modified by HR. It used to process the three TREC collections at once. Now it is defined 
+# to handle one collection at a time
 def read_collection(collection_path, k=5):
     """Function that for every TREC collection reads queries , create folds for the Kfold cross validation
     ,reads the collection qrels ,save qrels and queries for each fold,reads documents
-    on xml format and saves them into csv format"""
+    on xml format and saves them into csv format""" #HR
     
     queries = read_queries(collection_path + '/queries')
 
@@ -128,7 +138,7 @@ class TrecCollection:
 
     def load_collection(self, collection_path):
         """Function that loads the collection : it loads documents and the folds containing the queries per fold
-        in Csv format,qrels per fold and the training qrels per fold . It is run after the function read_collection"""
+        in Csv format,qrels per fold and the training qrels per fold . It is run after the function read_collection""" #HR
         self.documents = pd.read_csv(collection_path + '/documents.csv', index_col='id_right', na_filter=False)
 
         self.folds_queries = []
@@ -142,7 +152,7 @@ class TrecCollection:
             self.folds_training_qrels.append(utils.read_trec_train_qrels(collection_path + '/fold' + str(i) + '/qrels'))
 
     def update_standard_vocabulary(self, sequences, remove_stopwords=True):
-        """Function that updates the standard vocabulary using new sequences"""
+        """Function that updates the standard vocabulary using new sequences""" #HR
         count = 0
         if remove_stopwords:
             for _, sequence in sequences.iterrows():
@@ -160,7 +170,7 @@ class TrecCollection:
     def build_standard_vocabulary(self,
                                   min_occ=2,
                                   remove_stopwords=True):
-        """Function that builds the standard vocabulary from documents with minimum occurence equal to 2"""
+        """Function that builds the standard vocabulary from documents with minimum occurence equal to 2""" #HR
         self.vocabulary = Counter()
 
         self.update_standard_vocabulary(self.documents, remove_stopwords)
@@ -183,7 +193,7 @@ class TrecCollection:
                             min_occ=5):
         """General function that preprocesses the Trec collection by building vocabulary, using the tokenizer
         to index documents, the folds of queries and all the queries. It is run after the method
-        load_collection"""
+        load_collection""" #HR
         self.build_standard_vocabulary(min_occ=min_occ,
                                        remove_stopwords=remove_stopwords)
 
@@ -214,7 +224,7 @@ class TrecCollection:
                 counter += 1
 
     def build_inverted_index(self):
-        """Function that builds the inverted index of documents """
+        """Function that builds the inverted index of documents """ #HR
         self.inverted_index = dict()
 
         for token in self.vocabulary:
@@ -226,25 +236,23 @@ class TrecCollection:
                 self.inverted_index[token][i] += np.float32(1.0)
 
     def compute_idf(self):
-        """Funciton that computes the idf of every term in te inverted index"""
+        """Funciton that computes the idf of every term in te inverted index""" #HR
         nb_docs = len(self.doc_index)
         self.idf = {token: np.log((nb_docs + 1) / (1 + len(self.inverted_index[token]))) for token in
                     self.inverted_index}
 
     def compute_docs_length(self):
-        """Function that computes the length of each document in the collection"""
+        """Function that computes the length of each document in the collection""" #HR
         self.docs_length = {i: len(doc) for i, doc in enumerate(self.indexed_docs)}
 
     def compute_collection_frequencies(self):
-        """Function that computes frequency of words in the collection"""
+        """Function that computes frequency of words in the collection""" #HR
         coll_length = sum([value for key, value in self.docs_length.items()])
         self.c_freq = {token: sum([freq for _, freq in self.inverted_index[token].items()]) / coll_length for token in
                        self.inverted_index}
 
     def index_relations(self):
-        #         self.folds_queries = []
-        #         self.folds_qrels = []
-        #         self.folds_training_qrels = []
+        #HR ????
 
         self.folds_indexed_qrels = []
         self.folds_training_indexed_qrels = []
@@ -276,7 +284,7 @@ class TrecCollection:
 
     def compute_info_retrieval(self):
         """Function that builds the inverted index, the idf of the terms; documents length
-        and frequencies of terms in the collection and indexes the relations"""
+        and frequencies of terms in the collection and indexes the relations""" #HR
         self.build_inverted_index()
         self.compute_idf()
         self.compute_docs_length()
@@ -292,7 +300,7 @@ class TrecCollection:
 
     def pickle_indexed_collection(self, path):
         """Function that writes the different indexed collection parts other than documents annd fold queries
-        into a pickle format"""
+        into a pickle format""" #HR
         self.documents = None
         self.folds_queries = None
         with open(path, 'wb') as f:
@@ -300,7 +308,7 @@ class TrecCollection:
 
     def compute_fasttext_embedding(self, model_path):
         """Function that computes the embedding matrix using the fasttext embedding: vectors of length
-        300 for every token in the vocabulary"""
+        300 for every token in the vocabulary""" #HR
         model = fasttext.load_model(model_path)
         dim = model.get_dimension()
         vocab_size = int(len(self.vocabulary) / 2)
@@ -311,7 +319,7 @@ class TrecCollection:
     def generate_training_batches(self, fold, batch_size=64):
         """Function that builds batches of queries and their corresponding negative and positive documents
         for training for a particular fold. These batches are picked from outside the fold we want to
-        test or validate on"""
+        test or validate on""" #HR
         positive_pairs = []
         negative_pairs = {}
         for i in range(self.k):

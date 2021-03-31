@@ -1,3 +1,10 @@
+# =============================================================================
+# Created By  : Hamdi REZGUI
+# Created Date: March 23 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Script to train baseline models on WikIR collection
+# =============================================================================
+
 source activate python3.7
 
 NB_EPOC=100

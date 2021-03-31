@@ -1,4 +1,12 @@
-
+# =============================================================================
+# Created By  : Jibril FREJJ
+# Created Date: February 16 2020
+# Modified By  : Hamdi REZGUI
+# Modified Date: March 21 2021
+# E-mail: hamdi.rezgui@grenoble-inp.org
+# Description: Definition of the classes of differentiable IR models with their 
+# network architecture
+# =============================================================================
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model
@@ -6,7 +14,7 @@ from tensorflow.keras import layers
 
 ####Differentiable models"
 """This file contains the definitions of differantiable models introduced in chapter 7 for tf,tf-idf,jm,dir,bm25 that can be trained on a particular
-collection. It contains the architecture of the rededifined differentiable model with the one linear layer for the prediction of TDV"""
+collection. It contains the architecture of the rededifined differentiable model with the one linear layer for the prediction of TDV""" #HR
 class diff_simple_TF(Model):
     def __init__(self, embedding_matrix, dropout_rate=0.1):
         super(diff_simple_TF, self).__init__()
@@ -22,13 +30,18 @@ class diff_simple_TF(Model):
         self.dropout_rate = dropout_rate
 
     def make_BoW(self, seq, index, sparse_index):
+        #computing a mask tensor where the value zero is considered as a padding value that should be masked out #HR
         mask = tf.dtypes.cast(self.embedding.compute_mask(index), dtype=tf.float32)
+        # Multiplying the mask with a tensor of seq where the dimensions of size 1 are removed #HR THe result is a tensor
+        # of only values
         seq = tf.math.multiply(mask, tf.squeeze(seq))
         seq = tf.reshape(seq, [-1])
 
+        #Creating a sparse tensor and reordering its elements
         seq = tf.SparseTensor(indices=sparse_index, values=seq, dense_shape=[self.vocab_size, index.shape[0]])
         seq = tf.sparse.reorder(seq)
-
+        
+        #??? HR
         linearized = tf.matmul(seq.indices, tf.constant([[index.shape[0]], [1]], dtype=tf.int64))
         y, idx = tf.unique(tf.squeeze(linearized))
         values = tf.math.segment_sum(seq.values, idx)
@@ -40,7 +53,7 @@ class diff_simple_TF(Model):
         return tf.sparse.to_dense(seq)
 
     def call(self, q_index_float_32, q_index, q_sparse_index, d_index, d_sparse_index):
-        """This calculates the relevance"""
+        """This calculates the relevance between queries and documents""" #HR
         q = self.make_BoW(q_index_float_32, q_index, q_sparse_index)
 
         d = tf.nn.dropout(self.embedding(d_index), rate=self.dropout_rate)
@@ -52,7 +65,7 @@ class diff_simple_TF(Model):
         return rel, d
 
     def compute_index(self):
-        """This computes the TDV weights for the terms in the vocabulary"""
+        """This computes the TDV weights for the terms in the vocabulary""" #HR
         index = [_ for _ in range(self.vocab_size)]
 
         all_embeddings = self.embedding(np.asarray(index))
@@ -238,7 +251,7 @@ class diff_BM25(Model):
 
         return np.reshape(self.linear(all_embeddings).numpy(), (self.vocab_size,))
 
-
+# The class for Jelnik-Mercer model was absent in the original file. HR created it
 class diff_JM(Model):
     def __init__(self, embedding_matrix, lamb=0.15, dropout_rate=0.1):
         super(diff_JM, self).__init__()
