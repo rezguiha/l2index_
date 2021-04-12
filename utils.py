@@ -111,7 +111,7 @@ def evaluate_inverted_index(inverted_index):
     return vocab_size, tot_nb_elem
 
 
-def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_name, save_res=True):
+def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_name, save_res=False):
     """Function that saves the results of retrieval: the top_k documents according to their score for
     a certain model identified by model_name. Then, it computes different metrics for IR using the pytrec_eval
     package""" #HR
@@ -122,7 +122,8 @@ def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_n
     if not save_res:
         os.remove(model_name)
 
-    measures = {"map", "ndcg_cut", "recall", "P"}
+    #measures = {"map", "ndcg_cut", "recall", "P"}
+    measures = {"ndcg_cut"}
 
     evaluator = pytrec_eval.RelevanceEvaluator(qrel, measures)
 
@@ -137,6 +138,7 @@ def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_n
                'ndcg_cut_1000': 0,
                'map': 0,
                'recall_1000': 0}
+
     nb_queries = len(all_metrics)
     for key, values in all_metrics.items():
         for metric in metrics:
@@ -282,7 +284,7 @@ def eval_baseline_index_wikir(coll_path,
                         epoch):
     """This function computes the metrics for the baseline models for term matching methods and
     updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
-    print('tf')
+    print('tf',flush=True)
     #validation
     results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_validation_queries,
                                   Collection.inverted_index)
@@ -317,7 +319,7 @@ def eval_baseline_index_wikir(coll_path,
     test_plot_values['tf'][0].append(1.0)
     test_plot_values['tf'][1].append(metrics)
 
-    print('tf_idf')
+    print('tf_idf',flush=True)
     #validation
     results = baseline_models_and_tdv_implementation.tf_idf(Collection.indexed_validation_queries,
                      Collection.inverted_index,
@@ -353,7 +355,7 @@ def eval_baseline_index_wikir(coll_path,
     test_plot_values['tf_idf'][0].append(1.0)
     test_plot_values['tf_idf'][1].append(metrics)
 
-    print('DIR')
+    print('DIR',flush=True)
     #validation
     results = baseline_models_and_tdv_implementation.dir_language_model(Collection.indexed_validation_queries,
                                  Collection.inverted_index,
@@ -393,7 +395,7 @@ def eval_baseline_index_wikir(coll_path,
     test_plot_values['DIR'][0].append(1.0)
     test_plot_values['DIR'][1].append(metrics)
     
-    print('BM25')
+    print('BM25',flush=True)
     #validation
     results = baseline_models_and_tdv_implementation.Okapi_BM25(Collection.indexed_validation_queries,
                          Collection.inverted_index,
@@ -432,7 +434,7 @@ def eval_baseline_index_wikir(coll_path,
     test_plot_values['BM25'][0].append(1.0)
     test_plot_values['BM25'][1].append(metrics)
     
-    print('JM')
+    print('JM',flush=True)
     #validation
     
     results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_validation_queries,
