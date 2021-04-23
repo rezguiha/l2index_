@@ -4,8 +4,8 @@
 # Modified By  : Hamdi REZGUI
 # Modified Date: March 16 2021
 # E-mail: hamdi.rezgui@grenoble-inp.org
-# Description: Definition of useful functions to build vocabulary and index 
-# queries and documents of collections. 
+# Description: Definition of useful functions to build vocabulary and index
+# queries and documents of collections.
 # HR modified the name of the functions by adding prefix std_tokenizer because
 # there are functions of the same name in other code files
 # =============================================================================
@@ -49,6 +49,7 @@ def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
     index = dict()
     count = 0
     if stemmer is None:
+        # Run across all document collection
         for key, element in pdDataFrame.iterrows():
             indexed_elements.append(
                 [vocabulary[elem.lower()] for elem in element[0].split(" ") if elem.lower() in vocabulary])
@@ -80,7 +81,7 @@ def std_tokenizer_index_dict(pdDataFrame, vocabulary):
     return index, indexed_elements
 
 
-def std_tokenizer_preprocess(queries, documents, min_occ=5): 
+def std_tokenizer_preprocess(queries, documents, min_occ=5):
     """Function that preprocesses queries and documents. It builds the standard vocabulary and indexes both
     the documents and the queries and returns the vocabulary , the query and doc index and the indexed elements of
     both doc and  query""" #HR
