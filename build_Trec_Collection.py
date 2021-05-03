@@ -7,11 +7,13 @@
 # Description: Parsing arguments and launching steps to build a TREC collection
 # =============================================================================
 import argparse
+import os
 from Trec_Collection import TrecCollection
 import Trec_Collection
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--original_coll_path', type=str,help='if present, then produces documents.xml from original source')
     parser.add_argument('-c', '--coll_path', nargs="?", type=str)
     parser.add_argument('-i', '--index_path', nargs="?", type=str)
     parser.add_argument('-f', '--fasttext_path', nargs="?", type=str)
@@ -25,10 +27,19 @@ def main():
     # Set to True only if the collection haven't been processed by creating folds containing documents
     # , queries and qrels for each fold and creating csv files from Xml format
     #HR
+
+    # if we add the argument --original_coll_path then the original files
+    # are uncompressed ans assembled into the XML file documents.xml
+    # Do nothing if documents.xml aready exists
+    if args.original_coll_path is not None:
+        if not os.path.isfile(os.path.join(args.coll_path,'documents.xml')):
+            print("Build documents.xml from "+args.original_coll_path)
+            Trec_Collection.installFromOrigin(args.original_coll_path,args.coll_path)
+
     if args.build_folds_preprocess:
         print("Creating folds for the K-fold cross validation and preprocessing",flush=True)
         Trec_Collection.read_collection(args.coll_path)
-    
+
     print("Loading collection (documents ,folds queries and qrels and folds training qrels",flush=True)
     Collection = TrecCollection(k=5)
     Collection.load_collection(args.coll_path)

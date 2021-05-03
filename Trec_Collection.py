@@ -4,7 +4,7 @@
 # Modified By  : Hamdi REZGUI
 # Modified Date: March 23 2021
 # E-mail: hamdi.rezgui@grenoble-inp.org
-# Description: Definition of some global methods and the TREC definition class 
+# Description: Definition of some global methods and the TREC definition class
 # with its internal methods
 # =============================================================================
 import os
@@ -15,6 +15,7 @@ import fasttext
 import numpy as np
 import pytrec_eval
 import pandas as pd
+import subprocess
 
 from nltk.stem import snowball
 from collections import Counter
@@ -22,7 +23,23 @@ from nltk.corpus import stopwords
 
 import std_tokenizer
 import utils
+
 ####Useful methods for trec collection and trec collection class definition#### HR
+
+def installFromOrigin(sourcePath: str,localPath: str):
+    """
+    Install a collection from original sources
+    Create a XML file documents.xml, into the localPath directory
+    """
+    # Local file name
+    localFileName = os.path.join(localPath,'documents.xml')
+    fd = open(localFileName,'a')
+    with os.scandir(sourcePath) as entries:
+        for entry in entries:
+            if (entry.name.endswith('.Z')):
+                path = os.path.join(sourcePath,entry.name)
+                zcat = subprocess.Popen(['zcat', path], stdout=fd)
+
 
 def build_folds(queries_ids, k=5):
     """Builds folds for the K-fold cross validation """ #HR
@@ -102,13 +119,13 @@ def save_documents_csv(coll_path, documents):
     d = {"text_right": [documents[key] for key in documents]}
     pd.DataFrame(data=d, index=index).to_csv(coll_path + '/documents.csv')
 
-#This function has been modified by HR. It used to process the three TREC collections at once. Now it is defined 
+#This function has been modified by HR. It used to process the three TREC collections at once. Now it is defined
 # to handle one collection at a time
 def read_collection(collection_path, k=5):
     """Function that for every TREC collection reads queries , create folds for the Kfold cross validation
     ,reads the collection qrels ,save qrels and queries for each fold,reads documents
     on xml format and saves them into csv format""" #HR
-    
+
     queries = read_queries(collection_path + '/queries')
 
     folds = build_folds(list(queries.keys()), k=k)
