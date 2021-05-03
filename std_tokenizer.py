@@ -12,9 +12,9 @@
 from collections import Counter
 from nltk.corpus import stopwords
 
-
+#JPC? Pourquoi "standard" ??
 def std_tokenizer_build_standard_vocabulary(queries, documents, min_occ=2, limit_docs=None, limit_queries=None):
-    """Function that builds the standard vocabulary from a list of queries and a list of documents and
+    """Builds the standard vocabulary from a list of queries and a list of documents and
     with a limit on the number of documents and queries to manipulate""" #HR
     vocabulary = Counter()
 
@@ -43,7 +43,7 @@ def std_tokenizer_build_standard_vocabulary(queries, documents, min_occ=2, limit
 
 
 def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
-    """Function that indexes a dataframe either documents or queries for example according to a vocabulary.
+    """Indexes a dataframe either documents or queries for example according to a vocabulary.
     While doing that it can perform a stemmerization if the vocabulary was built on words that got stemmerized""" #HR
     indexed_elements = []
     index = dict()
@@ -54,6 +54,7 @@ def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
             indexed_elements.append(
                 [vocabulary[elem.lower()] for elem in element[0].split(" ") if elem.lower() in vocabulary])
             index[str(key)] = count
+            #JPC A QUOI CA SERT ??? Supprimer !!!
             index[count] = str(key)
             count += 1
 
@@ -62,6 +63,7 @@ def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
             indexed_elements.append([vocabulary[stemmer.stem(elem.lower())] for elem in element[0].split(" ") if
                                      stemmer.stem(elem.lower()) in vocabulary])
             index[str(key)] = count
+            #JPC A QUOI CA SERT ??? Supprimer !!!
             index[count] = str(key)
             count += 1
 
