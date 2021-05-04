@@ -8,6 +8,7 @@
 # with its internal methods
 # =============================================================================
 import os
+import time
 import pickle
 import random
 import string
@@ -26,19 +27,25 @@ import utils
 
 ####Useful methods for trec collection and trec collection class definition#### HR
 
-def installFromOrigin(sourcePath: str,localPath: str):
+def installFromOrigin(sourcePath: str,localPath: str, max_files: int = -1):
     """
     Install a collection from original sources
     Create a XML file documents.xml, into the localPath directory
     """
+    # Number of files treated
+    nbFilesTreated = 0;
     # Local file name
     localFileName = os.path.join(localPath,'documents.xml')
     fd = open(localFileName,'a')
     with os.scandir(sourcePath) as entries:
         for entry in entries:
             if (entry.name.endswith('.Z')):
+                nbFilesTreated += 1
                 path = os.path.join(sourcePath,entry.name)
                 zcat = subprocess.Popen(['zcat', path], stdout=fd)
+                if max_files > 0 and nbFilesTreated >= max_files:
+                    break
+    fd.close()
 
 
 def build_folds(queries_ids, k=5):
@@ -147,17 +154,23 @@ def read_collection(collection_path, k=5):
 
 class TrecCollection:
     def __init__(self, k=5, language='english'):
+        """
+        documents: pandas.DataFrame, [docid] => text string
+        k: number of folders for the queries
+        """
         self.documents = None
         self.k = k
         self.language = language
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
 
-    def load_collection(self, collection_path):
-        """Function that loads the collection : it loads documents and the folds containing the queries per fold
-        in Csv format,qrels per fold and the training qrels per fold . It is run after the function read_collection""" #HR
+    def load_collection(self, collection_path) -> int:
+        """
+        Loads the collection : it loads documents and the folds containing the queries per fold
+        in Csv format,qrels per fold and the training qrels per fold . It is run after the function read_collection
+        Return the number of documents found in the cvs file
+        """ #HR
         self.documents = pd.read_csv(collection_path + '/documents.csv', index_col='id_right', na_filter=False)
-
         self.folds_queries = []
         self.folds_qrels = []
         self.folds_training_qrels = []
@@ -167,6 +180,7 @@ class TrecCollection:
                                                   na_filter=False))
             self.folds_qrels.append(utils.read_qrels(collection_path + '/fold' + str(i) + '/qrels'))
             self.folds_training_qrels.append(utils.read_trec_train_qrels(collection_path + '/fold' + str(i) + '/qrels'))
+        return self.documents.size
 
     def update_standard_vocabulary(self, sequences, remove_stopwords=True):
         """Function that updates the standard vocabulary using new sequences""" #HR

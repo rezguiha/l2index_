@@ -89,4 +89,4 @@ fi
 
 #python build_Trec_Collection.py -c $COLLPATH -i $INDEXPATH -f $FASTTEXT_PATH -b $BUILD_FOLDS >$LOGFILE 2>$LOGERRORFILE
 
-python build_Trec_Collection.py -o $ORIGINAL_COLL_SRC -c $COLLPATH -i $INDEXPATH -f $FASTTEXT_PATH -b $BUILD_FOLDS
+python build_Trec_Collection.py -m 100 -o $ORIGINAL_COLL_SRC -c $COLLPATH -i $INDEXPATH -f $FASTTEXT_PATH -b $BUILD_FOLDS
