@@ -81,7 +81,7 @@ def read_documents(documents_path):
     doc_text = ['']
     fill_text = False
     with open(documents_path, 'r', encoding='latin1') as f:
-
+        # Read each line, i is the line number (not used)
         for i, line in enumerate(f):
             if "<DOCNO>" in line:
                 doc_ids.append(line.strip("<DOCNO> ").strip(" </DOCNO>\n"))
@@ -264,6 +264,7 @@ class TrecCollection:
 
         for i, indexed_document in enumerate(self.indexed_docs):
             for token in indexed_document:
+                # Pas la peine d'avoir des floats c'est la fréquence
                 self.inverted_index[token][i] += np.float32(1.0)
 
     def compute_idf(self):
