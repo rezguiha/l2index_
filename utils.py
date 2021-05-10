@@ -122,8 +122,7 @@ def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_n
     if not save_res:
         os.remove(model_name)
 
-    #measures = {"map", "ndcg_cut", "recall", "P"}
-    measures = {"ndcg_cut"}
+    measures = {"map", "ndcg_cut", "recall", "P"}
 
     evaluator = pytrec_eval.RelevanceEvaluator(qrel, measures)
 
@@ -727,7 +726,7 @@ def eval_learned_index_trec(coll_path,
 #         plot_values['weighted_JM'][1].append(metrics)
 
 
-    pickle.dump(plot_values, open(plot_path + '/fold' + str(fold) + '/' +  experiment_name, 'wb'))
+    pickle.dump(plot_values, open(plot_path + '/fold' + str(fold) + '/' +  experiment_name +'_epoch_'+str(epoch), 'wb'))
 
     # HR added this function to evaluate baseline models on TREC after training to get the TDV weights. It is a modified version of eval_learned_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
     
