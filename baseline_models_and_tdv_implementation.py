@@ -10,8 +10,8 @@ def simple_tf(indexed_queries, inverted_index):
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += freq
         if len(result) == 0:
             result[-1] += 0
@@ -204,4 +204,3 @@ def weighted_JM_language_model(indexed_queries, inverted_index, docs_length, c_f
         results.append(result)
 
     return results
-

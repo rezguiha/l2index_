@@ -10,13 +10,17 @@ import numpy as np
 #Defintion of Inverted structure class
 class Inverted_structure:
     def __init__(self):
+        # Extern documet idf, the position in this list is internal doc Id
         self.document_IDs=[]
+        # All tocken posting list description : [posting_long,tocken_id]
         self.vocabulary=dict()
+        # A list of posting list for each tocken internal id as an array
         self.posting_lists=[]
+        # Size of each document by doc internal Id
         self.documents_length=arr.array('I')
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
-        
+
     def inverse_document(self,document_ID,document_text):
         """Function that updates posting lists and vocabulary from a document text and add the document ID to the list of document IDs"""
         self.document_IDs.append(document_ID)
@@ -34,12 +38,12 @@ class Inverted_structure:
         self.documents_length.append(doc_length)
         #Creating or updating the vocabulary and the posting lists
         for token,frequency in tmp_dict_freq.items():
-            if token not in self.vocabulary.keys():                        
+            if token not in self.vocabulary.keys():
                 #Updating vocabulary with the new token [length of posting list=1,position in the posting file=internal token ID]
                 self.vocabulary[token]=[1,internal_token_ID]
                 #Creating an array of type unsigned int contraining a single input since the word is not in the vocabulary
                 posting_list=arr.array('I', [internal_doc_ID,frequency])
-                #Appending the new posting list 
+                #Appending the new posting list
                 self.posting_lists.append(posting_list)
                 #Incrementing to get the next position
                 internal_token_ID+=1
@@ -49,7 +53,7 @@ class Inverted_structure:
                 #Getting the position of the posting list
                 pos=self.vocabulary[token][1]
                 #Extending the posting list to include the document ID and the frequency in the document
-                self.posting_lists[pos].extend([internal_doc_ID,frequency])  
+                self.posting_lists[pos].extend([internal_doc_ID,frequency])
         del(tmp_dict_freq)
 
     def save(self,file_path):
@@ -58,20 +62,20 @@ class Inverted_structure:
         with open(file_path+'/posting_file','wb') as f:
             for posting_list in self.posting_lists:
                 posting_list.tofile(f)
-        f.close()
+
         #Saving the vocabulary and the document IDS
         with open(file_path+'/vocabulary', 'wb') as f:
             pickle.dump(self.vocabulary, f, protocol=pickle.HIGHEST_PROTOCOL)
-        f.close()
+
         with open(file_path+'/document_IDs', 'wb') as f:
-            pickle.dump(self.document_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)   
-        f.close()
+            pickle.dump(self.document_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)
+
         #Saving the documents length
         with open(file_path+'/documents_length','wb') as f:
             self.documents_length.tofile(f)
-        f.close()
+
     def load(self,file_path):
-        """Function that loads the posting lists , vocabulary and document IDs""" 
+        """Function that loads the posting lists , vocabulary and document IDs"""
         #Initializing the objects to contain the posting lists,vocabulary and document IDs
         self.vocabulary=dict()
         self.document_IDs=[]
@@ -80,11 +84,11 @@ class Inverted_structure:
         #Loading the vocabulary
         with open(file_path+'/vocabulary', 'rb') as f:
             self.vocabulary=pickle.load(f)
-        f.close()
+
         #Loading the document IDS
         with open(file_path+'/document_IDs', 'rb') as f:
             self.document_IDs=pickle.load(f)
-        f.close()
+
         #Loading the posting lists
         with open(file_path+'/posting_file', 'rb') as f:
             #Going through the vocabulary in order of position to get the length of each posting lists and get the
@@ -96,15 +100,24 @@ class Inverted_structure:
                 posting_list.fromfile(f,2*length_of_posting_list)
                 self.posting_lists.append(posting_list)
 
-        f.close()
-        #Loading documents length 
+        #Loading documents length
         with open(file_path+'/documents_length', 'rb') as f:
             #We use frombytes because it does not require to enter the number of elements you want to retrieve. fromfile does.
             self.documents_length.frombytes(f.read())
+
     def get_vocabulary_size(self):
         return len(self.vocabulary)
+
+    def token(self):
+        """
+        Acces to all tockens as a generator
+        """
+        for key in self.vocabulary.keys():
+            yield key
+
     def get_number_of_inversed_documents(self):
         return len(self.document_IDs)
+
     def get_posting_list(self,token):
         """Function that returns a list of tuples (document_intenal_ID,frequency) from the list of posting lists"""
         try:
@@ -114,19 +127,37 @@ class Inverted_structure:
         except:
             print("Unkown error")
         posting_list=self.posting_lists[internal_token_ID]
-        
+
         return [(posting_list[2*i],posting_list[2*i+1]) for i in range(length_of_posting_list)]
-            
+
+    def posting_list(self,token):
+        """
+        list of tuples (document_intenal_ID,frequency) from the list of posting lists
+        Similar to get_posting_list but expressed as a generator
+        """
+        try:
+            length_of_posting_list,internal_token_ID=self.vocabulary[token]
+        except KeyError:
+            print( token +" is not present in the vocabulary . No posting list found")
+        except:
+            print("Unkown error")
+        posting_list=self.posting_lists[internal_token_ID]
+        i = 0;
+        if i < length_of_posting_list:
+            yield (posting_list[2*i],posting_list[2*i+1])
+            i += 1;
+
+
     def get_external_ID_document(self,internal_document_ID):
         """Function that gets external document ID from the internal document ID"""
         try:
             external_document_ID=self.document_IDs[internal_document_ID]
         except ValueError:
             print( "document not present in the list")
-        except: 
+        except:
             print("Unknown Error")
         return external_document_ID
-    
+
     def get_internal_document_ID(self, external_document_ID):
         """Function that gets the internal_document_ID from the external_document_ID"""
         internal_document_ID=None
@@ -137,12 +168,14 @@ class Inverted_structure:
             raise ValueError
         else:
             return internal_document_ID
+
     def compute_idf(self):
         """Function that computes idf for every word in the vocabulary"""
         number_of_documents=len(self.document_IDs)
         #self.vocabulary[token][0] is the length of the posting list. Remember a token in vocabulary has a value [length of posting list,position of posting list or internal token ID]
         self.idf={token: np.log((number_of_documents + 1) / (1 + self.vocabulary[token][0])) for token in
                     self.vocabulary.keys()}
+
     def compute_collection_frequencies(self):
         """Function that computes frequencies of each word in the vocabulary"""
         self.c_freq={}
@@ -156,7 +189,7 @@ class Inverted_structure:
             self.c_freq[token]=0
             for i in range(length_posting_list):
                 self.c_freq[token]+=posting_list[2*i+1]/coll_length
-        
+
 ## Class Collection for Wikir###
 
 class Collection:
@@ -181,9 +214,7 @@ class Collection:
         self.training_relevance = utils.read_qrels(collection_path + '/training/qrels')
         self.validation_relevance = utils.read_qrels(collection_path + '/validation/qrels')
         self.test_relevance = utils.read_qrels(collection_path + '/test/qrels')
-        
 
-    
     def build_inverted_index_and_vocabulary(self,file_path=None,save=True):
         """Function that builds the inverted index and  the vocabulary"""
         inverted_structure=Inverted_structure()
@@ -193,6 +224,6 @@ class Collection:
         if save and file_path!=None :
             if os.path.exists(file_path):
                 inverted_structure.save(file_path)
-            else: 
+            else:
                 raise IOException('Path does not exist: %s' % file_path)
         return inverted_structure.document_IDs,inverted_structure.vocabulary,inverted_structure.posting_lists,inverted_structure.documents_length
