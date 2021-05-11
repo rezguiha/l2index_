@@ -25,8 +25,8 @@ def weighted_simple_tf(indexed_queries, inverted_index, weights):
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += weights[token] * freq
         if len(result) == 0:
             result[-1] += 0
@@ -41,8 +41,8 @@ def tf_idf(indexed_queries, inverted_index, idf):
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += freq * idf[token]
         if len(result) == 0:
             result[-1] += 0
@@ -56,8 +56,8 @@ def dir_language_model(indexed_queries, inverted_index, docs_length, c_freq, mu=
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += np.log(1 + (freq / (mu * c_freq[token]))) + np.log(
                         mu / (docs_length[document] + mu))
         if len(result) == 0:
@@ -70,13 +70,13 @@ def dir_language_model(indexed_queries, inverted_index, docs_length, c_freq, mu=
 def Okapi_BM25(indexed_queries, inverted_index, docs_length, idf, k1=1.2, b=0.75):
     results = []
 
-    avg_docs_len = sum([value for key, value in docs_length.items()]) / len(docs_length)
+    avg_docs_len = sum(docs_length) / len(docs_length)
 
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += idf[token] * ((k1 + 1) * freq) / (
                                 freq + k1 * ((1 - b) + b * docs_length[document] / avg_docs_len))
         if len(result) == 0:
@@ -92,8 +92,8 @@ def fast_Okapi_BM25(indexed_queries, inverted_index, docs_length, idf, avg_docs_
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += idf[token] * ((k1 + 1) * freq) / (
                                 freq + k1 * ((1 - b) + b * docs_length[document] / avg_docs_len))
         if len(result) == 0:
@@ -109,8 +109,8 @@ def weighted_tf_idf(indexed_queries, inverted_index, weights, idf):
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += weights[token] * freq * idf[token]
         if len(result) == 0:
             result[-1] += 0
@@ -124,8 +124,8 @@ def weighted_dir_language_model(indexed_queries, inverted_index, weights, docs_l
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += weights[token] * (
                                 np.log(1 + (freq / (mu * c_freq[token]))) + np.log(mu / (docs_length[document] + mu)))
         if len(result) == 0:
@@ -138,13 +138,13 @@ def weighted_dir_language_model(indexed_queries, inverted_index, weights, docs_l
 def weighted_Okapi_BM25(indexed_queries, inverted_index, weights, docs_length, idf, k1=1.2, b=0.75):
     results = []
 
-    avg_docs_len = sum([value for key, value in docs_length.items()]) / len(docs_length)
+    avg_docs_len = sum(docs_length) / len(docs_length)
 
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += weights[token] * idf[token] * ((k1 + 1) * freq) / (
                                 freq + k1 * ((1 - b) + b * docs_length[document] / avg_docs_len))
         if len(result) == 0:
@@ -162,8 +162,8 @@ def Lemur_tf_idf(indexed_queries, inverted_index, docs_length, idf, k1=1.2, b=0.
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     Robertson_tf = k1 * freq / (freq + k1 * (1 - b + b * docs_length[document] / avg_docs_len))
                     result[document] += Robertson_tf * np.power(idf[token], 2)
         if len(result) == 0:
@@ -178,8 +178,8 @@ def JM_language_model(indexed_queries, inverted_index, docs_length, c_freq, Lamb
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += np.log(
                         1 + ((1 / (c_freq[token])) * (Lambda * freq) / ((1 - Lambda) * docs_length[document])))
 
@@ -194,8 +194,8 @@ def weighted_JM_language_model(indexed_queries, inverted_index, docs_length, c_f
     for indexed_query in indexed_queries:
         result = Counter()
         for token in indexed_query:
-            if token in inverted_index:
-                for document, freq in inverted_index[token].items():
+            if token in inverted_index.token():
+                for document, freq in inverted_index.posting_list(token):
                     result[document] += weights[token]*np.log(
                         1 + ((1 / (c_freq[token])) * (Lambda * freq) / ((1 - Lambda) * docs_length[document])))
 

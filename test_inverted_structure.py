@@ -1,3 +1,4 @@
+#Packages
 import argparse
 import os
 import time
@@ -5,11 +6,13 @@ import pickle
 import numpy
 import struct
 import array
-
 from nltk.corpus import words
 from random import sample
 from random import randint
-from wikIR_Collection_opt import Inverted_structure
+#files
+from Inverted_structure import Inverted_structure
+
+from collections import Counter
 
 def are_equal_doc(inverse_structure1,inverse_structure2):
     #Equality of Document IDs
@@ -156,7 +159,7 @@ def test_inverse_document(file_path):
     else:
         print("The save and load doc length  were not successful",flush=True)    
 def test_inverse_document_random_text(file_path):
-    """ Test inverse_document_method """
+    """ Test inverse_document_method with random generate text"""
     #Building inverted structure
     print("Test inverse_document",flush=True)
     #Generate documents with the same average length of documents of Wikir Collection
@@ -224,12 +227,106 @@ def test_inverse_document_random_text(file_path):
     end=time.time()
     print("Time to compute collection frequencies ", start-end,flush=True)
     print("Total time ", time.time()-start0,flush=True)
+    
+#Testing the generators in a baseline model
+def simple_tf(indexed_queries, inverted_index):
+    results = []
+    for indexed_query in indexed_queries:
+        result = Counter()
+        for token in indexed_query:
+            if token in inverted_index.token():
+                print("------token " , token ," is being evaluated",flush=True)
+                for document, freq in inverted_index.posting_list(token):
+                    print("document ",document, " has been generated with freq =",freq, flush=True)
+                    result[document] += freq
+        if len(result) == 0:
+            result[-1] += 0
+        results.append(result)
+
+    return results
+def tf_idf(indexed_queries, inverted_index, idf):
+    results = []
+
+    for indexed_query in indexed_queries:
+        result = Counter()
+        for token in indexed_query:
+            if token in inverted_index.token():
+                print("------token " , token ," is being evaluated",flush=True)
+                for document, freq in inverted_index.posting_list(token):
+                    print("document ",document, " has been generated with freq =",freq, flush=True)
+                    result[document] += freq * idf[token]
+        if len(result) == 0:
+            result[-1] += 0
+        results.append(result)
+
+    return results
+def test_generator_baseline_model(file_path):
+    print("Test inverse_document",flush=True)
+    start=time.time()
+    
+    inverted_structure=Inverted_structure()
+    document_ID='1125'
+    document_text="The boy is playing football in the street boy boy street boy"
+
+    inverted_structure.inverse_document(document_ID,document_text)
+
+
+    document_ID='1130'
+    document_text="The boy is reading about football reading all the time"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    
+    document_ID='1240'
+    document_text="The boy is watching videos about street football"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    end=time.time()
+    print("average time to inverse a document ",(end-start)/3,flush=True) 
+    print("-------------document IDs------------",flush=True)
+    for doc_ID in inverted_structure.document_IDs:
+        print('\n'+doc_ID,flush=True)
+    print("-------------Vocabulary------------",flush=True)
+    for token,value in inverted_structure.vocabulary.items():
+        print( token ," length = " ,value[0], " position= ",value[1],flush=True)
+    print("-------------Posting lists------------",flush=True)
+    i=0
+    for posting_list in inverted_structure.posting_lists:
+        print("Posting list " ,i,flush=True)
+        for elem in posting_list:
+            print(elem, ' ',flush=True)
+        i+=1 
+        print('\n',flush=True)
+    print("------------Documents length--------------",flush=True)
+    for doc_length in inverted_structure.documents_length:
+        print('\n',doc_length,flush=True)
+    print("------------ IDF ----------------",flush=True)
+    inverted_structure.compute_idf()
+    for token,idf in inverted_structure.idf.items():
+        print( token ," idf = " ,idf,flush=True)
+    print("------------ Collection frequencies ----------------",flush=True)
+    inverted_structure.compute_collection_frequencies()
+    for token,c_freq in inverted_structure.c_freq.items():
+        print( token ," collection frequency = " ,c_freq,flush=True)
+    queries=[]
+    query1=["boy","footbal","street"]
+    queries.append(query1)
+    query2=["footbal","video" ,"watch"]
+    queries.append(query2)
+    query3=["sleep","watch","footbal"]
+    queries.append(query3)
+    results=tf_idf(queries,inverted_structure,inverted_structure.idf)
+    i=0
+    for res in results:
+        print( "result for query ",i,flush=True)
+        for key,value in res.items():
+            print(  "document ", key , " = " ,value,flush=True)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file_path')
     args = parser.parse_args()
 
-    test_inverse_document_random_text(args.file_path)
+    test_generator_baseline_model(args.file_path)
 
 
 if __name__ == "__main__":
