@@ -26,7 +26,7 @@ class Queries:
                 query.append(token)
         self.processed_queries.append(query)
     def get_number_of_queries(self):
-        return len(self.processesd_queries)
+        return len(self.queries_IDs)
     def get_external_ID_of_query(self,internal_query_ID):
         """Function that gets external query ID from the internal query ID"""
         try:

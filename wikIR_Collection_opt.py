@@ -19,15 +19,19 @@ class Collection:
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
 
-    def load_collection(self, collection_path):
-        """Function that loads an already processed collection and reads its csv files"""
+    def load_documents(self, collection_path):
+        """Function that loads an already processed collection and reads its csv documents"""
         self.documents = pd.read_csv(collection_path + '/documents.csv', index_col='id_right', na_filter=False)
+    def load_queries(self, collection_path):
+        """Function that loads an already processed collection and reads its csv queries"""
         self.training_queries = pd.read_csv(collection_path + '/training/queries.csv', index_col='id_left',
                                             na_filter=False)
         self.validation_queries = pd.read_csv(collection_path + '/validation/queries.csv', index_col='id_left',
                                               na_filter=False)
         self.test_queries = pd.read_csv(collection_path + '/test/queries.csv', index_col='id_left', na_filter=False)
 
+    def load_relevance(self, collection_path):
+        """Function that loads an already processed collection and reads its  relevance"""
         self.training_relevance = utils.read_qrels(collection_path + '/training/qrels')
         self.validation_relevance = utils.read_qrels(collection_path + '/validation/qrels')
         self.test_relevance = utils.read_qrels(collection_path + '/test/qrels')
