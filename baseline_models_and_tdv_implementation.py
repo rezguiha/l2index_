@@ -6,23 +6,28 @@ from collections import Counter
 #queries_struct is an instance of the Queries class
 #inverted_struct is an instance of Inverted_structure
 
-def simple_tf(queries_struct, inverted_struct):
-    results = []
-    # Using the generator of the class Queries to go through the processed queries
-    for query in queries_struct.query():
+class simple_tf:
+    def __init__(queries_struct, inverted_struct, max=1000):
+        self.queries_struct = queries_struct
+
+    def runQueries():
+        # Declare only one objet pour cumulate the answers
         result = Counter()
-        for token in query:
-            #Using the generator of the class Inverted_structure to go through the tokens in the vocabulary
-            if token in inverted_struct.token():
-                #Using the generator of the class Inverted_structure to go through the tuples (document internal id,frequency) generated from the posting list of the token
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += freq
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
-
-    return results
-
+        # Using the generator of the class Queries to go through the processed queries
+        for query in sef.queries_struct.query():
+            # Empty the ansers list
+            result.clear()
+            for token in query:
+                #Using the generator of the class Inverted_structure to go through the tokens in the vocabulary
+                if inverted_struct.existsToken(token):
+                    #Using the generator of the class Inverted_structure to go through the tuples (document internal id,frequency) generated from the posting list of the token
+                    for document, freq in inverted_struct.posting_list(token):
+                        result[document] += freq
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            # Sort sur la valeur <======
+            # et et limite à max resultats
+            yield result
 
 def weighted_simple_tf(queries_struct, inverted_struct, weights):
     results = []
