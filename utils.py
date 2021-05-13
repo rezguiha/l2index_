@@ -16,6 +16,7 @@ import numpy as np
 import pytrec_eval
 import tensorflow as tf
 from collections import Counter
+import time
 
 import baseline_models_and_tdv_implementation
 
@@ -111,23 +112,37 @@ def evaluate_inverted_index(inverted_index):
     return vocab_size, tot_nb_elem
 
 
-def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_name, save_res=False):
-    """Function that saves the results of retrieval: the top_k documents according to their score for
-    a certain model identified by model_name. Then, it computes different metrics for IR using the pytrec_eval
-    package""" #HR
-    Collection.save_results(queries_index, results, model_name, top_k=1000)
-
-    with open(model_name, 'r') as f_run:
+def compute_metrics(queries_ID,documents_ID, qrel, results,score_file_path,top_k=1000, save_res=False):
+    """Function that saves the results of retrieval: the top_k documents according to their score in a format suitable for the pytrec_eval library . Then, it computes different metrics for IR using the pytrec_eval package""" #HR
+    # queries_ID is the array of queries IDs from a Queries instance
+    #documents_ID is the array of document IDs from the Inverted_structure instance
+    #qrel is the loaded query document relavance file
+    #Score_file_path is the full path to the directory including the name of the file where to store the top_k results in the format of pytrec_eval 
+    #results are the list of counter objects that you get from the baseline models
+    
+    #Writing the top k results in the format for pytrec_eval
+    result_generator=(result for result in results) 
+    with open(score_file_path, 'w') as f:
+            for internal_query_ID, counter_doc_relavance_score in enumerate(result_generator):
+                top_docs_generator=(x for x in counter_doc_relavance_score.most_common(top_k))
+                for i, scores in enumerate(top_docs_generator):
+                    internal_document_ID=int(scores[0])
+                    relavance_score=scores[1]
+                    f.write(str(queries_ID[internal_query_ID]) + ' Q0 ' + str(documents_ID[internal_document_ID]) + ' ' + str(i) + ' ' + str(relavance_score) + ' 0\n')
+    
+    #Loading result score file using pytrec_eval
+    with open(score_file_path, 'r') as f_run:
         run = pytrec_eval.parse_run(f_run)
     if not save_res:
-        os.remove(model_name)
-
+        os.remove(score_file_path)
+        
+    #Evaluating metrics for all queries that have a query document relavance
     measures = {"map", "ndcg_cut", "recall", "P"}
 
     evaluator = pytrec_eval.RelevanceEvaluator(qrel, measures)
 
     all_metrics = evaluator.evaluate(run)
-
+    #Aggregating metrics and computing the average
     metrics = {'P_5': 0,
                'P_10': 0,
                'P_20': 0,
@@ -144,8 +159,6 @@ def compute_metrics(coll_path, Collection, queries_index, qrel, results, model_n
             metrics[metric] += values[metric] / nb_queries
 
     return metrics
-
-
 
 def utils_compute_info_retrieval(Collection, weights, weighted=True):
     """Computes inverted index, idf, document length and c_frequency for a collection with TDV weights""" #HR
@@ -272,207 +285,278 @@ def eval_baseline_index_trec(coll_path,
 
     
     # HR added this function to evaluate baseline models on wikIR collections. It is a modified version of eval_baseline_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too
-def eval_baseline_index_wikir(coll_path,
-                        Collection,
-                        validation_qrel,
-                        test_qrel,
-                        validation_plot_values,
-                        test_plot_values,
-                        results_path,
-                        experiment_name,
-                        epoch):
+def eval_baseline_index_wikir(inverted_structure,
+                              validation_queries_struct,
+                              test_queries_struct,
+                              validation_qrel,
+                              test_qrel,
+                              validation_plot_values,
+                              test_plot_values,
+                              results_path,
+                              experiment_name,
+                              epoch):
     """This function computes the metrics for the baseline models for term matching methods and
     updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
-    print('tf',flush=True)
-    #validation
-    results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_validation_queries,
-                                  Collection.inverted_index)
+    
+    number_val_queries=validation_queries_struct.get_number_of_queries()
+    number_test_queries=test_queries_struct.get_number_of_queries()
+    print("Number of validation queries = ",number_val_queries,flush=True)
+    print("Number of test queries = ",number_test_queries,flush=True)
 
+    print('--------------------tf---------------------------',flush=True)
+    ###############validation
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.simple_tf(validation_queries_struct,inverted_structure)
+    
+    end=time.time()
+    print("Time for computing results TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    
     if not os.path.exists(results_path + '/validation/' + experiment_name + '/tf/'):
         os.makedirs(results_path + '/validation/' + experiment_name + '/tf/')
-
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.validation_queries_index,
+    
+    start=time.time()
+    
+    metrics = compute_metrics(validation_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               validation_qrel,
                               results,
                               results_path + '/validation/' + experiment_name + '/tf/' + str(epoch))
-
+    
+    end=time.time()
+    print("Time for computing metrics TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    
     validation_plot_values['tf'][0].append(1.0)
     validation_plot_values['tf'][1].append(metrics)
     
-    #Test
-    results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_test_queries,
-                                  Collection.inverted_index)
-
+    ################Test
+    
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.simple_tf(test_queries_struct,inverted_structure)
+    
+    end=time.time()
+    print("Time for computing results TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    
     if not os.path.exists(results_path + '/test/' + experiment_name + '/tf/'):
         os.makedirs(results_path + '/test/' + experiment_name + '/tf/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.test_queries_index,
+    start=time.time()
+    
+    metrics = compute_metrics(test_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               test_qrel,
                               results,
                               results_path + '/test/' + experiment_name + '/tf/' + str(epoch))
 
+    end=time.time()
+    print("Time for computing metrics TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    
     test_plot_values['tf'][0].append(1.0)
     test_plot_values['tf'][1].append(metrics)
 
-    print('tf_idf',flush=True)
-    #validation
-    results = baseline_models_and_tdv_implementation.tf_idf(Collection.indexed_validation_queries,
-                     Collection.inverted_index,
-                     Collection.idf)
+    print('-----------------------tf_idf------------------------------',flush=True)
+    #########validation
+    
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.tf_idf(validation_queries_struct,inverted_structure)
 
+    end=time.time()
+    print("Time for computing results TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+
+    
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/tf_idf/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/tf_idf/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.validation_queries_index,
+    start=time.time()
+    
+    metrics = compute_metrics(validation_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               validation_qrel,
                               results,
                               results_path + '/validation/' +  experiment_name + '/tf_idf/' + str(epoch))
 
+    end=time.time()
+    print("Time for computing metrics TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    
     validation_plot_values['tf_idf'][0].append(1.0)
     validation_plot_values['tf_idf'][1].append(metrics)
-    #test
-    results = baseline_models_and_tdv_implementation.tf_idf(Collection.indexed_test_queries,
-                     Collection.inverted_index,
-                     Collection.idf)
+    ###########test
+    
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.tf_idf(test_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results TF-IDF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/tf_idf/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/tf_idf/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.test_queries_index,
+    start=time.time()
+    metrics = compute_metrics(test_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               test_qrel,
                               results,
                               results_path + '/test/' +  experiment_name + '/tf_idf/' + str(epoch))
 
+    end=time.time()
+    print("Time for computing metrics TF-IDF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+
     test_plot_values['tf_idf'][0].append(1.0)
     test_plot_values['tf_idf'][1].append(metrics)
 
-    print('DIR',flush=True)
-    #validation
-    results = baseline_models_and_tdv_implementation.dir_language_model(Collection.indexed_validation_queries,
-                                 Collection.inverted_index,
-                                 Collection.docs_length,
-                                 Collection.c_freq)
+    print('--------------------------DIR----------------------------',flush=True)
+    ############validation
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.dir_language_model(validation_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/DIR/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/DIR/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.validation_queries_index,
+    start=time.time()
+    metrics = compute_metrics(validation_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               validation_qrel,
                               results,
                               results_path + '/validation/' + experiment_name + '/DIR/' + str(epoch))
+    end=time.time()
+    print("Time for computing metrics DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     validation_plot_values['DIR'][0].append(1.0)
     validation_plot_values['DIR'][1].append(metrics)
 
-    #test
+    ##############test
+    start=time.time()
     
-    results = baseline_models_and_tdv_implementation.dir_language_model(Collection.indexed_test_queries,
-                                 Collection.inverted_index,
-                                 Collection.docs_length,
-                                 Collection.c_freq)
+    results = baseline_models_and_tdv_implementation.dir_language_model(test_queries_struct,inverted_structure)
 
+    end=time.time()
+    print("Time for computing results DIR test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+
+    
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/DIR/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/DIR/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.test_queries_index,
+    start=time.time()
+    metrics = compute_metrics(test_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               test_qrel,
                               results,
                               results_path + '/test/' + experiment_name + '/DIR/' + str(epoch))
 
+    end=time.time()
+    print("Time for computing metrics DIR test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+
     test_plot_values['DIR'][0].append(1.0)
     test_plot_values['DIR'][1].append(metrics)
     
-    print('BM25',flush=True)
-    #validation
-    results = baseline_models_and_tdv_implementation.Okapi_BM25(Collection.indexed_validation_queries,
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.idf)
+    print('---------------------------BM25----------------------',flush=True)
+    ############validation
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.Okapi_BM25(validation_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/BM25/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/BM25/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.validation_queries_index,
+    start=time.time()
+    
+    metrics = compute_metrics(validation_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               validation_qrel,
                               results,
                               results_path + '/validation/' +  experiment_name + '/BM25/' + str(epoch))
 
+    end=time.time()
+    print("Time for computing metrics BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+
     validation_plot_values['BM25'][0].append(1.0)
     validation_plot_values['BM25'][1].append(metrics)
     
-    #test
-    results = baseline_models_and_tdv_implementation.Okapi_BM25(Collection.indexed_test_queries,
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.idf)
+    ############test
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.Okapi_BM25(test_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results BM25 test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/BM25/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/BM25/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.test_queries_index,
+    start=time.time()
+    
+    metrics = compute_metrics(test_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               test_qrel,
                               results,
                               results_path + '/test/' +  experiment_name + '/BM25/' + str(epoch))
+    end=time.time()
+    print("Time for computing metrics BM25 test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     test_plot_values['BM25'][0].append(1.0)
     test_plot_values['BM25'][1].append(metrics)
     
-    print('JM',flush=True)
-    #validation
+    print('--------------------------JM------------------------------',flush=True)
+    ##########validation
+    start=time.time()
     
-    results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_validation_queries,
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.c_freq)
+    results = baseline_models_and_tdv_implementation.JM_language_model(validation_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.validation_queries_index,
+    start=time.time()
+    
+    metrics = compute_metrics(validation_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               validation_qrel,
                               results,
                               results_path + '/validation/' +  experiment_name + '/JM/' + str(epoch))
+    end=time.time()
+    print("Time for computing metrics JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
+    
     validation_plot_values['JM'][0].append(1.0)
     validation_plot_values['JM'][1].append(metrics)
 
-    #test
-    results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_test_queries,
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.c_freq)
+    ##########test
+    start=time.time()
+    
+    results = baseline_models_and_tdv_implementation.JM_language_model(test_queries_struct,inverted_structure)
+
+    end=time.time()
+    print("Time for computing results JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/JM/')
-
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.test_queries_index,
+    
+    start=time.time()
+    
+    metrics = compute_metrics(test_queries_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               test_qrel,
                               results,
                               results_path + '/test/' +  experiment_name + '/JM/' + str(epoch))
+    end=time.time()
+    print("Time for computing metrics JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     test_plot_values['JM'][0].append(1.0)
     test_plot_values['JM'][1].append(metrics)
-
+    print("Total time to evaluate baselines models and compute metrics =" , time.time()-start0,flush=True)
+    
     # HR added this function to evaluate baseline models on TREC after training to get the TDV weights. It is a modified version of eval_learned_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
 def eval_learned_index_trec(coll_path,
                        Collection,
