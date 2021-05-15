@@ -5,6 +5,7 @@ from collections import Counter
 from nltk.corpus import stopwords
 import array as arr
 import numpy as np
+import matplotlib.pyplot as plt
 #Defintion of Inverted structure class
 class Inverted_structure:
     def __init__(self):
@@ -36,7 +37,7 @@ class Inverted_structure:
         self.documents_length.append(doc_length)
         #Creating or updating the vocabulary and the posting lists
         for token,frequency in tmp_dict_freq.items():
-            if token not in self.vocabulary.keys():
+            if token not in self.vocabulary:
                 #Updating vocabulary with the new token [length of posting list=1,position in the posting file=internal token ID]
                 self.vocabulary[token]=[1,internal_token_ID]
                 #Creating an array of type unsigned int contraining a single input since the word is not in the vocabulary
@@ -187,3 +188,39 @@ class Inverted_structure:
             self.c_freq[token]=0
             for i in range(length_posting_list):
                 self.c_freq[token]+=posting_list[2*i+1]/coll_length
+    def statistics_about_the_structure(self,path_save_plot=None,save_plot=True):
+        """Function that computes statistics abour the inverted structure """
+        vocab_size=self.get_vocabulary_size()
+        print("The vocabulary has ", vocab_size, "tokens",flush=True)
+        min_pos_len=99999999999
+        max_pos_len=0
+        sum_pos_len=0
+        list_pos_len=[]
+        count=0
+        for key,value in self.vocabulary.items():
+            length_of_posting_list=value[0]
+            list_pos_len.append(length_of_posting_list)
+            sum_pos_len+=length_of_posting_list
+            if length_of_posting_list>max_pos_len:
+                max_pos_len=length_of_posting_list
+                max_token=key
+            if length_of_posting_list<min_pos_len:
+                min_pos_len=length_of_posting_list
+            if length_of_posting_list==1 and count <100:
+                print("Word = ", key," has post len 1",flush=True)
+        print("minimum length of posting list is = ",min_pos_len,flush=True)
+        print("maximum length of posting list is = ",max_pos_len,flush=True)
+        print("average length of posting list is = ",sum_pos_len/vocab_size,flush=True)
+        print("The most used word is = ", max_token,flush=True)
+#         plt.hist(list_pos_len,50,density=True,facecolor='g')
+#         plt.ylabel=('Number of posting lists')
+#         plt.title('Histogram of posting lists length')
+#         plt.xlim(min_pos_len,max_pos_len)
+#         plt.ylim(0, 0.03)
+#         plt.grid(True)
+#         plt.show()
+#         plt.style.use('ggplot')
+        plt.hist(list_pos_len,range=(min_pos_len,100), bins=100,color='yellow',edgecolor='red')
+        plt.show()
+        if save_plot and path_save_plot!=None:
+            plt.savefig(path_save_plot+'/Histogram_of_posting_lists_length.png')
