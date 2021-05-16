@@ -114,12 +114,12 @@ class Inverted_structure:
         for key in self.vocabulary.keys():
             yield key
 
-    def existsToken(token):
+    def existsToken(self,token):
         """
         Fast access to test if a key exists
         Do to use the token() générator for that
         """
-        return tocken in self.vocabulary
+        return token in self.vocabulary
 
     def get_number_of_documents(self):
         return len(self.document_IDs)

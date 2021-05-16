@@ -7,6 +7,7 @@
 # Description: Definition of the classes of differentiable IR models with their
 # network architecture
 # =============================================================================
+#packages
 import os
 import json
 import pickle
@@ -17,7 +18,8 @@ import pytrec_eval
 import tensorflow as tf
 from collections import Counter
 import time
-
+import resource
+#files
 import baseline_models_and_tdv_implementation
 
 ####Useful functions for reading qrel files when you are loading the collection #HR
@@ -112,20 +114,18 @@ def evaluate_inverted_index(inverted_index):
     return vocab_size, tot_nb_elem
 
 
-def compute_metrics(queries_ID,documents_ID, qrel, results,score_file_path,top_k=1000, save_res=False):
+def compute_metrics(queries_ID,documents_ID, qrel, baseline_model,score_file_path,top_k=1000, save_res=False):
     """Function that saves the results of retrieval: the top_k documents according to their score in a format suitable for the pytrec_eval library . Then, it computes different metrics for IR using the pytrec_eval package""" #HR
     # queries_ID is the array of queries IDs from a Queries instance
     #documents_ID is the array of document IDs from the Inverted_structure instance
     #qrel is the loaded query document relavance file
     #Score_file_path is the full path to the directory including the name of the file where to store the top_k results in the format of pytrec_eval
-    #results are the list of counter objects that you get from the baseline models
+    #baseline_model is the instance of the class corresponding to the baseline model to evaluate. baseline_model.runQueries() is a result generator 
 
     #Writing the top k results in the format for pytrec_eval
-    result_generator=(result for result in results.runQueries()) 
     with open(score_file_path, 'w') as f:
-            for internal_query_ID, counter_doc_relavance_score in enumerate(result_generator):
-                top_docs_generator=(x for x in counter_doc_relavance_score.most_common(top_k))
-                for i, scores in enumerate(top_docs_generator):
+            for internal_query_ID, counter_doc_relavance_score in enumerate(baseline_model.runQueries()):
+                for i, scores in enumerate(counter_doc_relavance_score.most_common(top_k)):
                     internal_document_ID=int(scores[0])
                     relavance_score=scores[1]
                     f.write(str(queries_ID[internal_query_ID]) + ' Q0 ' + str(documents_ID[internal_document_ID]) + ' ' + str(i) + ' ' + str(relavance_score) + ' 0\n')
@@ -297,35 +297,34 @@ def eval_baseline_index_wikir(inverted_structure,
                               epoch):
     """This function computes the metrics for the baseline models for term matching methods and
     updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
-
+    start0=time.time()
+    
     number_val_queries=validation_queries_struct.get_number_of_queries()
     number_test_queries=test_queries_struct.get_number_of_queries()
     print("Number of validation queries = ",number_val_queries,flush=True)
     print("Number of test queries = ",number_test_queries,flush=True)
-
+    print("Memory usage start eval_baseline", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
     print('--------------------tf---------------------------',flush=True)
     ###############validation
+    
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.simple_tf(validation_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.simple_tf(validation_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/validation/' + experiment_name + '/tf/'):
         os.makedirs(results_path + '/validation/' + experiment_name + '/tf/')
 
-    start=time.time()
 
     metrics = compute_metrics(validation_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               validation_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/validation/' + experiment_name + '/tf/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-
+    print("Time for computing results and metrics TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of tf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
     validation_plot_values['tf'][0].append(1.0)
     validation_plot_values['tf'][1].append(metrics)
 
@@ -333,25 +332,23 @@ def eval_baseline_index_wikir(inverted_structure,
 
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.simple_tf(test_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.simple_tf(test_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' + experiment_name + '/tf/'):
         os.makedirs(results_path + '/test/' + experiment_name + '/tf/')
 
-    start=time.time()
 
     metrics = compute_metrics(test_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               test_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/test/' + experiment_name + '/tf/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
-
+    print("Time for computing results and metrics TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of tf test", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+    
     test_plot_values['tf'][0].append(1.0)
     test_plot_values['tf'][1].append(metrics)
 
@@ -360,25 +357,23 @@ def eval_baseline_index_wikir(inverted_structure,
 
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.tf_idf(validation_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.tf_idf(validation_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/tf_idf/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/tf_idf/')
 
-    start=time.time()
 
     metrics = compute_metrics(validation_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               validation_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/validation/' +  experiment_name + '/tf_idf/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of tf_idf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     validation_plot_values['tf_idf'][0].append(1.0)
     validation_plot_values['tf_idf'][1].append(metrics)
@@ -386,23 +381,22 @@ def eval_baseline_index_wikir(inverted_structure,
 
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.tf_idf(test_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.tf_idf(test_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results TF-IDF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/tf_idf/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/tf_idf/')
 
-    start=time.time()
+
     metrics = compute_metrics(test_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               test_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/test/' +  experiment_name + '/tf_idf/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics TF-IDF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics TF-IDF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of tf_idf test", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     test_plot_values['tf_idf'][0].append(1.0)
     test_plot_values['tf_idf'][1].append(metrics)
@@ -411,22 +405,20 @@ def eval_baseline_index_wikir(inverted_structure,
     ############validation
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.dir_language_model(validation_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.dir_language_model(validation_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-
+  
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/DIR/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/DIR/')
 
-    start=time.time()
     metrics = compute_metrics(validation_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               validation_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/validation/' + experiment_name + '/DIR/' + str(epoch))
     end=time.time()
-    print("Time for computing metrics DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of DIR validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     validation_plot_values['DIR'][0].append(1.0)
     validation_plot_values['DIR'][1].append(metrics)
@@ -434,24 +426,22 @@ def eval_baseline_index_wikir(inverted_structure,
     ##############test
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.dir_language_model(test_queries_struct,inverted_structure)
-
-    end=time.time()
-    print("Time for computing results DIR test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    baseline_model = baseline_models_and_tdv_implementation.dir_language_model(test_queries_struct,inverted_structure)
 
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/DIR/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/DIR/')
 
-    start=time.time()
+
     metrics = compute_metrics(test_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               test_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/test/' + experiment_name + '/DIR/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics DIR test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Time for computing resutls and metrics DIR test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of DIR test", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     test_plot_values['DIR'][0].append(1.0)
     test_plot_values['DIR'][1].append(metrics)
@@ -460,24 +450,22 @@ def eval_baseline_index_wikir(inverted_structure,
     ############validation
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.Okapi_BM25(validation_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.Okapi_BM25(validation_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/BM25/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/BM25/')
 
-    start=time.time()
 
     metrics = compute_metrics(validation_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               validation_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/validation/' +  experiment_name + '/BM25/' + str(epoch))
 
     end=time.time()
-    print("Time for computing metrics BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of BM25 validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     validation_plot_values['BM25'][0].append(1.0)
     validation_plot_values['BM25'][1].append(metrics)
@@ -485,23 +473,21 @@ def eval_baseline_index_wikir(inverted_structure,
     ############test
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.Okapi_BM25(test_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.Okapi_BM25(test_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results BM25 test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
-
+  
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/BM25/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/BM25/')
 
-    start=time.time()
 
     metrics = compute_metrics(test_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               test_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/test/' +  experiment_name + '/BM25/' + str(epoch))
     end=time.time()
-    print("Time for computing metrics BM25 test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics BM25 test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of BM25 test", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     test_plot_values['BM25'][0].append(1.0)
     test_plot_values['BM25'][1].append(metrics)
@@ -510,23 +496,21 @@ def eval_baseline_index_wikir(inverted_structure,
     ##########validation
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.JM_language_model(validation_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.JM_language_model(validation_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-
+ 
     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
 
-    start=time.time()
-
+ 
     metrics = compute_metrics(validation_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               validation_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/validation/' +  experiment_name + '/JM/' + str(epoch))
     end=time.time()
-    print("Time for computing metrics JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of JM validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
 
     validation_plot_values['JM'][0].append(1.0)
@@ -535,27 +519,26 @@ def eval_baseline_index_wikir(inverted_structure,
     ##########test
     start=time.time()
 
-    results = baseline_models_and_tdv_implementation.JM_language_model(test_queries_struct,inverted_structure)
+    baseline_model = baseline_models_and_tdv_implementation.JM_language_model(test_queries_struct,inverted_structure)
 
-    end=time.time()
-    print("Time for computing results JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
 
     if not os.path.exists(results_path + '/test/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/test/' +  experiment_name + '/JM/')
 
-    start=time.time()
-
+ 
     metrics = compute_metrics(test_queries_struct.queries_IDs,
                               inverted_structure.document_IDs,
                               test_qrel,
-                              results,
+                              baseline_model,
                               results_path + '/test/' +  experiment_name + '/JM/' + str(epoch))
     end=time.time()
-    print("Time for computing metrics JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Time for computing results and metrics JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
+    print("Memory usage at the end of DIR validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     test_plot_values['JM'][0].append(1.0)
     test_plot_values['JM'][1].append(metrics)
     print("Total time to evaluate baselines models and compute metrics =" , time.time()-start0,flush=True)
+    
 
     # HR added this function to evaluate baseline models on TREC after training to get the TDV weights. It is a modified version of eval_learned_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
 def eval_learned_index_trec(coll_path,

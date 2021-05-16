@@ -7,21 +7,21 @@ from collections import Counter
 #inverted_struct is an instance of Inverted_structure
 
 class simple_tf:
-    def __init__(queries_struct, inverted_struct, max=1000):
+    def __init__(self,queries_struct, inverted_struct, max=1000):
         self.queries_struct = queries_struct
-
-    def runQueries():
+        self.inverted_struct=inverted_struct
+    def runQueries(self):
         # Declare only one objet pour cumulate the answers
         result = Counter()
         # Using the generator of the class Queries to go through the processed queries
-        for query in sef.queries_struct.query():
+        for query in self.queries_struct.query():
             # Empty the ansers list
             result.clear()
             for token in query:
                 #Using the generator of the class Inverted_structure to go through the tokens in the vocabulary
-                if inverted_struct.existsToken(token):
+                if self.inverted_struct.existsToken(token):
                     #Using the generator of the class Inverted_structure to go through the tuples (document internal id,frequency) generated from the posting list of the token
-                    for document, freq in inverted_struct.posting_list(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
                         result[document] += freq
     #         if len(result) == 0:
     #             result[-1] += 0
@@ -29,186 +29,218 @@ class simple_tf:
             # et et limite à max resultats
             yield result
 
-def weighted_simple_tf(queries_struct, inverted_struct, weights):
-    results = []
-    for query in queries_struct.query():
+class weighted_simple_tf:
+    def __init__(self,queries_struct, inverted_struct,weights, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.weights=weights
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += weights[token] * freq
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.weights[token] * freq
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
-
-def tf_idf(queries_struct, inverted_struct):
-    results = []
-    for query in queries_struct.query():
+class tf_idf:
+    def __init__(self,queries_struct, inverted_struct, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += freq * inverted_struct.idf[token]
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += freq * self.inverted_struct.idf[token]
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
-
-def dir_language_model(queries_struct, inverted_struct, mu=2500):
-    results = []
-    for query in queries_struct.query():
+class dir_language_model:
+    def __init__(self,queries_struct, inverted_struct, mu=2500, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.mu=mu
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += np.log(1 + (freq / (mu * inverted_struct.c_freq[token]))) + np.log(
-                        mu / (inverted_struct.documents_length[document] + mu))
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += np.log(1 + (freq / (self.mu * self.inverted_struct.c_freq[token]))) + np.log(
+                        self.mu / (self.inverted_struct.documents_length[document] + self.mu))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
-
-
-def Okapi_BM25(queries_struct, inverted_struct, k1=1.2, b=0.75):
-    results = []
-
-    avg_docs_len = sum(inverted_struct.documents_length) / len(inverted_struct.documents_length)
-
-    for query in queries_struct.query():
+class Okapi_BM25:
+    def __init__(self,queries_struct, inverted_struct,k1=1.2, b=0.75, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.k1=k1
+        self.b=b
+        self.avg_docs_len = sum(self.inverted_struct.documents_length) / len(self.inverted_struct.documents_length)
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += inverted_struct.idf[token] * ((k1 + 1) * freq) / (
-                                freq + k1 * ((1 - b) + b * inverted_struct.documents_length[document] / avg_docs_len))
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.inverted_struct.idf[token] * ((self.k1 + 1) * freq) / (
+                                freq + self.k1 * ((1 - self.b) + self.b * self.inverted_struct.documents_length[document] / self.avg_docs_len))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
-
-def fast_Okapi_BM25(queries_struct, inverted_struct, avg_docs_len, k1=1.2, b=0.75):
-    results = []
-
-    for query in queries_struct.query():
+class fast_Okapi_BM25:
+    def __init__(self,queries_struct, inverted_struct,avg_docs_len,k1=1.2, b=0.75, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.k1=k1
+        self.b=b
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += inverted_struct.idf[token] * ((k1 + 1) * freq) / (
-                                freq + k1 * ((1 - b) + b * inverted_struct.documents_length[document] / avg_docs_len))
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.inverted_struct.idf[token] * ((self.k1 + 1) * freq) / (
+                                freq + self.k1 * ((1 - self.b) + self.b * self.inverted_struct.documents_length[document] / avg_docs_len))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
 
-def weighted_tf_idf(queries_struct, inverted_struct, weights):
-    results = []
-
-    for query in queries_struct.query():
+class weighted_tf_idf:
+    def __init__(self,queries_struct, inverted_struct,weights, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.weights=weights
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += weights[token] * freq * inverted_struct.idf[token]
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.weights[token]*freq * inverted_struct.idf[token]
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
 
-def weighted_dir_language_model(queries_struct, inverted_struct, weights, mu=2500):
-    results = []
-    for query in queries_struct.query():
+
+class weighted_dir_language_model:
+    def __init__(self,queries_struct, inverted_struct,weights, mu=2500, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.weigths=weights
+        self.mu=mu
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += weights[token] * (
-                                np.log(1 + (freq / (mu * inverted_struct.c_freq[token]))) + np.log(mu / (inverted_struct.documents_length[document] + mu)))
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.weights[token]*np.log(1 + (freq / (self.mu * self.inverted_struct.c_freq[token]))) + np.log(
+                        self.mu / (self.inverted_struct.documents_length[document] + self.mu))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
-
-def weighted_Okapi_BM25(queries_struct, inverted_struct, weights, k1=1.2, b=0.75):
-    results = []
-
-    avg_docs_len = sum(inverted_struct.documents_length) / len(inverted_struct.documents_length)
-
-    for query in queries_struct.query():
+class weighted_Okapi_BM25:
+    def __init__(self,queries_struct, inverted_struct,weights,k1=1.2, b=0.75, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.k1=k1
+        self.b=b
+        self.weights=weigths
+        self.avg_docs_len = sum(self.inverted_struct.documents_length) / len(self.inverted_struct.documents_length)
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += weights[token] * inverted_struct.idf[token] * ((k1 + 1) * freq) / (
-                                freq + k1 * ((1 - b) + b * inverted_struct.documents_length[document] / avg_docs_len))
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.weights[token]*self.inverted_struct.idf[token] * ((self.k1 + 1) * freq) / (
+                                freq + self.k1 * ((1 - self.b) + self.b * self.inverted_struct.documents_length[document] / self.avg_docs_len))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
 
-
-def Lemur_tf_idf(queries_struct, inverted_struct, docs_length, idf, k1=1.2, b=0.75):
-    avg_docs_len = sum([value for key, value in docs_length.items()]) / len(docs_length)
-
-    results = []
-
-    for query in queries_struct.query():
+class Lemur_tf_idf:
+    def __init__(self,queries_struct, inverted_struct,k1=1.2, b=0.75, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.k1=k1
+        self.b=b
+        self.avg_docs_len = sum(self.inverted_struct.documents_length) / len(self.inverted_struct.documents_length)
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    Robertson_tf = k1 * freq / (freq + k1 * (1 - b + b * docs_length[document] / avg_docs_len))
-                    result[document] += Robertson_tf * np.power(idf[token], 2)
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        Robertson_tf = self.k1 * freq / (freq + self.k1 * (1 - self.b + self.b * self.inverted_struct.docs_length[document] / self.avg_docs_len))
+                    result[document] += Robertson_tf * np.power(self.inverted_struct.idf[token], 2)
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-    return results
-
-
-def JM_language_model(queries_struct, inverted_struct, docs_length, c_freq, Lambda=0.15):
-    results = []
-    for query in queries_struct.query():
+        
+class JM_language_model:
+    def __init__(self,queries_struct, inverted_struct,Lambda=0.15, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.Lambda=Lambda
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += np.log(
-                        1 + ((1 / (inverted_struct.c_freq[token])) * (Lambda * freq) / ((1 - Lambda) * inverted_struct.documents_length[document])))
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += np.log(
+                        1 + ((1 / (self.inverted_struct.c_freq[token])) * (self.Lambda * freq) / ((1 - self.Lambda) * self.inverted_struct.documents_length[document])))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-#         if len(result) == 0:
-#             result[-1] += 0
-        results.append(result)
-
-    return results
-
-def weighted_JM_language_model(queries_struct, inverted_struct, docs_length, c_freq,weights, Lambda=0.15):
-    results = []
-    for query in queries_struct.query():
+class weighted_JM_language_model:
+    def __init__(self,queries_struct, inverted_struct,weights,Lambda=0.15, max=1000):
+        self.queries_struct = queries_struct
+        self.inverted_struct=inverted_struct
+        self.Lambda=Lambda
+        self.weights=weights
+    def runQueries(self):
         result = Counter()
-        for token in query:
-            if token in inverted_struct.token():
-                for document, freq in inverted_struct.posting_list(token):
-                    result[document] += weights[token]*np.log(
-                        1 + ((1 / (inverted_struct.c_freq[token])) * (Lambda * freq) / ((1 - Lambda) * inverted_struct.documents_length[document])))
+        for query in self.queries_struct.query():
+            result.clear()
+            for token in query:
+                if self.inverted_struct.existsToken(token):
+                    for document, freq in self.inverted_struct.posting_list(token):
+                        result[document] += self.weights[token]*np.log(
+                        1 + ((1 / (self.inverted_struct.c_freq[token])) * (self.Lambda * freq) / ((1 - self.Lambda) * self.inverted_struct.documents_length[document])))
+    #         if len(result) == 0:
+    #             result[-1] += 0
+            yield result
 
-        if len(result) == 0:
-            result[-1] += 0
-        results.append(result)
-
-    return results
