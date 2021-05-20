@@ -8,10 +8,11 @@
 import os
 import pickle
 import argparse
-
+import time
 import pytrec_eval
 
-from Trec_Collection import TrecCollection
+from Trec_Collection_opt import TrecCollection
+import Inverted_structure
 import utils
 
 
@@ -30,33 +31,32 @@ def main():
     args = parser.parse_args()
 
     print(args, flush=True)
-
-    # Loading indexed collection
-    Collection = TrecCollection()
-    with open(args.indexed_path, 'rb') as f:
-        Collection = pickle.load(f)
-
-    Collection.doc_index[-1] = "-1"
-    Collection.doc_index["-1"] = -1
-    # Loading relevance judgements from collection
-    with open(args.coll_path + 'qrels', 'r') as f_qrel:
-        qrel = pytrec_eval.parse_qrel(f_qrel)
-    # ????
-    id_titl = Collection.vocabulary['titl']
-
-    for i in range(len(Collection.all_indexed_queries)):
-
-        if Collection.all_indexed_queries[i][0] == id_titl and len(Collection.all_indexed_queries[i]) > 1:
-            del Collection.all_indexed_queries[i][0]
-
-    for i in range(len(Collection.indexed_queries)):
-        for j in range(len(Collection.indexed_queries[i])):
-            if Collection.indexed_queries[i][j][0] == id_titl and len(Collection.indexed_queries[i][j]) > 1:
-                del Collection.indexed_queries[i][j][0]
-
     print('---------------------start-------------------', flush=True)
-    # Getting collection vocabulary size and total number of elements in collection
-    coll_vocab_size, coll_tot_nb_elem = utils.evaluate_inverted_index(Collection.inverted_index)
+    start0=time.time()
+    #Loading indexed_structure#HR
+    start=time.time()
+    inverted_structure=Inverted_structure.Inverted_structure()
+    inverted_structure.load(args.indexed_path)
+    end=time.time()
+    print("Time for loading indexed TREC collection ",end-start,flush=True)
+    #Computing idf and collection frequencies
+    start=time.time()
+    inverted_structure.compute_idf()
+    inverted_structure.compute_collection_frequencies()
+    end=time.time()
+    print("Time for computing idf and collection frequencies ", end-start,flush=True)
+    #Loading queries and processing queries
+    start=time.time()
+    Collection = TrecCollection()
+    Collection.load_folds_queries(args.coll_path)
+    folds_processed_queries=Collection.process_queries()
+    end=time.time()
+    print("Time to load queries and process them ",end-start,flush=True) 
+    
+    # Loading relevance judgements from collection
+    with open(args.coll_path + '/qrels', 'r') as f_qrel:
+        qrel = pytrec_eval.parse_qrel(f_qrel)
+ 
     # Creating for each fold and for a certain experiment a directory for results and plots data
     plot_values_folds_list=[]
     for fold in range(args.folds):
@@ -76,8 +76,8 @@ def main():
         if not os.path.exists(args.plot_path + '/fold' + str(fold) + '/'):
             os.makedirs(args.plot_path + '/fold' + str(fold) + '/')
         # Computing metrics for baseline models for a certain fold and updating plot_values dictionnary
-        utils.eval_baseline_index_trec(args.coll_path,
-                                       Collection,
+        utils.eval_baseline_index_trec(inverted_structure,
+                                       folds_processed_queries[fold],
                                        fold,
                                        qrel,
                                        plot_values,
@@ -86,7 +86,9 @@ def main():
                                        0)
         # appending plot values to the list
         plot_values_folds_list.append(plot_values)
-    #Evaluating baseline models without training.
+    
+    print("Total time= ",round(time.time()-start0)," s", flush=True)
+    #printing the evaluation baseline models without training.
         
     ndcg5 =dict()
     for model_name in ['tf',

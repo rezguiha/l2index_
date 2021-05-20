@@ -175,8 +175,8 @@ def utils_compute_info_retrieval(Collection, weights, weighted=True):
 
 
 # HR added this function to evaluate baseline models on TREC. It is a modified version of eval_baseline_index in the original file. The calls for the function in other files were different from its definition. I added the JM model too. #HR
-def eval_baseline_index_trec(coll_path,
-                        Collection,
+def eval_baseline_index_trec(inverted_structure,
+                        queries_of_fold_struct,
                         fold,
                         qrel,
                         plot_values,
@@ -187,17 +187,15 @@ def eval_baseline_index_trec(coll_path,
     updates the plot values dictionary for a certain fold and a certain epoch.This function is to be used on Trec collection """ #HR
     print('tf')
 
-    results = baseline_models_and_tdv_implementation.simple_tf(Collection.indexed_queries[fold],
-                                  Collection.inverted_index)
+    baseline_model = baseline_models_and_tdv_implementation.simple_tf(queries_of_fold_struct,inverted_structure)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' + experiment_name + '/tf/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/tf/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.queries_index[fold],
+    metrics = compute_metrics(queries_of_fold_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               qrel,
-                              results,
+                              baseline_model,
                               results_path + '/fold' + str(fold) + '/' +  experiment_name + '/tf/' + str(epoch))
 
     plot_values['tf'][0].append(1.0)
@@ -205,18 +203,15 @@ def eval_baseline_index_trec(coll_path,
 
     print('tf_idf')
 
-    results = baseline_models_and_tdv_implementation.tf_idf(Collection.indexed_queries[fold],
-                     Collection.inverted_index,
-                     Collection.idf)
+    baseline_model = baseline_models_and_tdv_implementation.tf_idf(queries_of_fold_struct,inverted_structure)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/tf_idf/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/tf_idf/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.queries_index[fold],
+    metrics = compute_metrics(queries_of_fold_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               qrel,
-                              results,
+                              baseline_model,
                               results_path + '/fold' + str(fold) + '/' +  experiment_name + '/tf_idf/' + str(epoch))
 
     plot_values['tf_idf'][0].append(1.0)
@@ -224,19 +219,15 @@ def eval_baseline_index_trec(coll_path,
 
     print('DIR')
 
-    results = baseline_models_and_tdv_implementation.dir_language_model(Collection.indexed_queries[fold],
-                                 Collection.inverted_index,
-                                 Collection.docs_length,
-                                 Collection.c_freq)
+    baseline_model = baseline_models_and_tdv_implementation.dir_language_model(queries_of_fold_struct,inverted_structure)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/DIR/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/DIR/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.queries_index[fold],
+    metrics = compute_metrics(queries_of_fold_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               qrel,
-                              results,
+                              baseline_model,
                               results_path + '/fold' + str(fold) + '/' + experiment_name + '/DIR/' + str(epoch))
 
     plot_values['DIR'][0].append(1.0)
@@ -244,19 +235,15 @@ def eval_baseline_index_trec(coll_path,
 
     print('BM25')
 
-    results = baseline_models_and_tdv_implementation.Okapi_BM25(Collection.indexed_queries[fold],
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.idf)
+    baseline_model = baseline_models_and_tdv_implementation.Okapi_BM25(queries_of_fold_struct,inverted_structure)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/BM25/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/BM25/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.queries_index[fold],
+    metrics = compute_metrics(queries_of_fold_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               qrel,
-                              results,
+                              baseline_model,
                               results_path + '/fold' + str(fold) + '/' +  experiment_name + '/BM25/' + str(epoch))
 
     plot_values['BM25'][0].append(1.0)
@@ -264,19 +251,15 @@ def eval_baseline_index_trec(coll_path,
 
     print('JM')
 
-    results = baseline_models_and_tdv_implementation.JM_language_model(Collection.indexed_queries[fold],
-                         Collection.inverted_index,
-                         Collection.docs_length,
-                         Collection.c_freq)
+    baseline_model = baseline_models_and_tdv_implementation.JM_language_model(queries_of_fold_struct,inverted_structure)
 
     if not os.path.exists(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/'):
         os.makedirs(results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/')
 
-    metrics = compute_metrics(coll_path,
-                              Collection,
-                              Collection.queries_index[fold],
+    metrics = compute_metrics(queries_of_fold_struct.queries_IDs,
+                              inverted_structure.document_IDs,
                               qrel,
-                              results,
+                              baseline_model,
                               results_path + '/fold' + str(fold) + '/' +  experiment_name + '/JM/' + str(epoch))
 
     plot_values['JM'][0].append(1.0)
