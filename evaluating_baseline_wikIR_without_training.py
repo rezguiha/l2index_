@@ -96,6 +96,7 @@ def main():
                                     args.results_path,
                                     args.experiment_name,
                                     0)
+    print("Total time =" ,round(time.time()-start0), " s",flush=True)
     #Printing ndcg5 values for validation and test partitions #HR
     ndcg5_val = dict()
     ndcg5_test = dict()

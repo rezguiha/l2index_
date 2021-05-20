@@ -16,7 +16,7 @@ class Queries:
     def process_query_and_get_ID(self,query_external_ID,non_processed_query_text):
         """Function that adds the external query ID to the list and processes the query and adds it to the processed queries list"""
         #Adding the exteral query ID
-        self.queries_IDs.append(query_external_ID)
+        self.queries_IDs.append(str(query_external_ID))
         query=[]
         #Processing the query
         for elem in non_processed_query_text.split(" "):

@@ -46,12 +46,12 @@ class Collection:
             inverted_structure.inverse_document(document_ID, document_text[0])
         end=time.time()
         number_of_documents=inverted_structure.get_number_of_documents()
-        print("Average time to inverse documents wikIR",round(((end-start)/number_ofdocuments)*1000, " ms",flush=True)
+        print("Average time to inverse documents wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Filtering vocabulary and posting lists
         start=time.time()
         inverted_structure.filter(minimum_occurence,proportion_of_frequent_words)  
         end=time.time()
-        print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_ofdocuments)*1000, " ms",flush=True)
+        print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Saving      
         if save and file_path != None:
             if os.path.exists(file_path):
