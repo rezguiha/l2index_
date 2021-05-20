@@ -6,6 +6,8 @@ from nltk.corpus import stopwords
 import array as arr
 import numpy as np
 import matplotlib.pyplot as plt
+import fasttext
+import resource
 #Defintion of Inverted structure class
 class Inverted_structure:
     def __init__(self):
@@ -55,6 +57,57 @@ class Inverted_structure:
                 self.posting_lists[pos].extend([internal_doc_ID,frequency])
         del(tmp_dict_freq)
 
+    def filter_vocabulary(self,minimum_occurence=5,proportion_of_frequent_words=0.2):
+        """Function that filters tokens from vocabulary and posting lists that have an occurence less than minimum_occurence or that are present in more than proportion_of_frequent_words of documents. These tokens will likely be not very useful for the retrieval objective"""
+        number_of_documents=self.get_number_of_documents()
+        indices_of_posting_lists_to_delete=arr.array('I')
+        keys_to_delete=[]
+        index_token=0
+        print("Memory usage start filter_inverted_structure", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+        #Iterating using a generator of tokens
+        for token in self.token():
+            length_of_posting_list=self.vocabulary[token][0]
+            posting_list=self.posting_lists[self.vocabulary[token][1]]
+            
+            #Calculating the frequency of the token in the collection and we stop when we exceed the minimum number of occurence
+            # If the result is less than the minimum occurence it means that we need to delete that element if not we keep it
+            sum_frequency_token=0
+            index_post=0
+            while (sum_frequency_token<minimum_occurence and index_post<length_of_posting_list):
+                sum_frequency_token+=posting_list[2*index_post+1]
+                index_post+=1
+            #Storing indices of posting lists and tokens to erase from the vocabulary and the posting lists
+            if (sum_frequency_token <minimum_occurence) or (length_of_posting_list>proportion_of_frequent_words*number_of_documents):
+                #Storing token=key to delete from vocabulary from the vocabulary
+                keys_to_delete.append(token)
+                #Storing indices of posting lists to delete. We can't delete them one by one because the indices will change when we do that
+                indices_of_posting_lists_to_delete.append(index_token)
+            index_token+=1
+        print("Memory usage after filling indices and tokens to delete", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+
+        #The indices of posting lists to delete are in an ascending order. But we need to go through it in reverse. So that, deleting elements doesn't modify the indices of the list. To do that we reverse the list of indices to delete using reverse iteration with the reversed() built-in . It neither reverses a list in-place, nor does it create a full copy. Instead we get a reverse iterator we can use to cycle through the elements of the list in reverse order
+        #We also do an update on the document_lengths. This is an inefficient way to do it. We can do better
+        index_to_delete_gen=(i for i in reversed(indices_of_posting_lists_to_delete))
+        for i in index_to_delete_gen:
+            posting_list_gen=(j for j in range(int(len(self.posting_lists[i])/2)))
+            for j in posting_list_gen:
+                self.documents_length[self.posting_lists[i][2*j]]-=self.posting_lists[i][2*j+1]
+            del self.posting_lists[i]
+
+        print("Memory usage after deleting posting lists and updating document lengths", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+        del(indices_of_posting_lists_to_delete)
+        #It is important to know that since Python 3.7 dictionaries are an ordered structure by insertion order
+        #We're filtering the vocabulary and updating the internal token ID in the vocabulary for the whole tokens after filtering
+        
+        for token in keys_to_delete:
+            del self.vocabulary[token]
+        #Iterating using a generator for yielding token from vocabulary
+        internal_token_ID=0
+        for token in self.token():
+                self.vocabulary[token][1]=internal_token_ID
+                internal_token_ID+=1
+        print("Memory usage after deleting tokens from vocab and updating internal token ID", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)   
+        del(keys_to_delete)
     def save(self,file_path):
         """A method that saves the posting file, the vocabulary and the document IDs"""
         #Writing the posting file
@@ -93,9 +146,10 @@ class Inverted_structure:
             #Going through the vocabulary in order of position to get the length of each posting lists and get the
             # posting list in the posting file in the order they were written in the file
             #value is [length of posting list,position]
-            for token,value in sorted(self.vocabulary.items(),key=lambda t:t[1][1]):
+            #It is important to know that since Python 3.7 dictionaries are an ordered structure by insertion order
+            for token in self.vocabulary:
                 posting_list=arr.array('I')
-                length_of_posting_list=value[0]
+                length_of_posting_list=self.vocabulary[token][0]
                 posting_list.fromfile(f,2*length_of_posting_list)
                 self.posting_lists.append(posting_list)
 
@@ -111,7 +165,7 @@ class Inverted_structure:
         """
         Acces to all tockens as a generator
         """
-        for key in self.vocabulary.keys():
+        for key in self.vocabulary:
             yield key
 
     def existsToken(self,token):
@@ -180,7 +234,7 @@ class Inverted_structure:
         number_of_documents=len(self.document_IDs)
         #self.vocabulary[token][0] is the length of the posting list. Remember a token in vocabulary has a value [length of posting list,position of posting list or internal token ID]
         self.idf={token: np.log((number_of_documents + 1) / (1 + self.vocabulary[token][0])) for token in
-                    self.vocabulary.keys()}
+                    self.vocabulary}
 
     def compute_collection_frequencies(self):
         """Function that computes frequencies of each word in the vocabulary"""
@@ -188,45 +242,76 @@ class Inverted_structure:
         #Calculating the total number of tokens in the collection
         coll_length = sum(self.documents_length)
         #The frequency of a word is the number of occurences of the token in the documents divided by the total number ot tokens in the collection
-        for token,value in self.vocabulary.items():
-            internal_token_ID=value[1]
-            length_posting_list=value[0]
+        for token in self.vocabulary:
+            internal_token_ID=self.vocabulary[token][1]
+            length_posting_list=self.vocabulary[token][0]
             posting_list=self.posting_lists[internal_token_ID]
             self.c_freq[token]=0
             for i in range(length_posting_list):
                 self.c_freq[token]+=posting_list[2*i+1]/coll_length
+    
+    def compute_and_save_fasttext_embeddings(self,model_path,save_file_path):       
+        """Function that computes and saves the fasttext embeddings of every token in the vocabulary : vectos of 300 dimension"""
+        model = fasttext.load_model(model_path)
+        with open(save_file_path+'/fasttext_embeddings','wb') as f:      
+            for token in self.vocabulary:
+                array_embeddings=arr.array('f',model[token])
+                array_embeddings.tofile(f)
+                
+    def load_fasttext_embeddings(self,file_path):
+        """Function that loads fasttext embeddings vectors of tokens in the vocabulary."""        
+        vocab_size = self.get_vocabulary_size()
+        self.embedding_matrix = np.zeros((vocab_size, 300),dtype=np.float32)
+        with open(file_path+'/fasttext_embeddings', 'rb') as f:           
+            index=0
+            for token in self.vocabulary: 
+                token_embedding=arr.array('f')
+                token_embedding.fromfile(f,300)
+                self.embedding_matrix[index] = token_embedding
+                index+=1
     def statistics_about_the_structure(self,path_save_plot=None,save_plot=True):
         """Function that computes statistics abour the inverted structure """
         vocab_size=self.get_vocabulary_size()
         print("The vocabulary has ", vocab_size, "tokens",flush=True)
+        number_docs=self.get_number_of_documents()
+        print("The Collection has ", number_docs, "documents",flush=True)
         min_pos_len=99999999999
         max_pos_len=0
         sum_pos_len=0
         list_pos_len=[]
-        count=0
-        for key,value in self.vocabulary.items():
-            length_of_posting_list=value[0]
+#         count_high_threshold=0
+#         sum_high_threshold=0
+#         sum_low_threshold=0
+#         count_low_threshold=0
+#         high_threshold_list=[]
+        for token in self.vocabulary:
+            length_of_posting_list=self.vocabulary[token][0]
             list_pos_len.append(length_of_posting_list)
             sum_pos_len+=length_of_posting_list
             if length_of_posting_list>max_pos_len:
                 max_pos_len=length_of_posting_list
-                max_token=key
+                max_token=token
             if length_of_posting_list<min_pos_len:
                 min_pos_len=length_of_posting_list
-            if length_of_posting_list==1 and count <100:
-                print("Word = ", key," has post len 1",flush=True)
+#             if length_of_posting_list>(0.2*number_docs):
+#                 count_high_threshold+=1
+#                 sum_high_threshold+=length_of_posting_list
+#                 high_threshold_list.append(token)
+#             if length_of_posting_list<5:
+#                 count_low_threshold+=1
+#                 sum_low_threshold+=length_of_posting_list
         print("minimum length of posting list is = ",min_pos_len,flush=True)
         print("maximum length of posting list is = ",max_pos_len,flush=True)
         print("average length of posting list is = ",sum_pos_len/vocab_size,flush=True)
         print("The most used word is = ", max_token,flush=True)
-#         plt.hist(list_pos_len,50,density=True,facecolor='g')
-#         plt.ylabel=('Number of posting lists')
-#         plt.title('Histogram of posting lists length')
-#         plt.xlim(min_pos_len,max_pos_len)
-#         plt.ylim(0, 0.03)
-#         plt.grid(True)
-#         plt.show()
-#         plt.style.use('ggplot')
+#         print("The number of tokens that appear in more than 20% of documents is = ", count_high_threshold ,flush=True)
+#         print("The number of times to modify document lengths after erasing tokens that appear in more than 20% of documents is = ", sum_high_threshold ,flush=True)
+#         print("The number of tokens that appear in less than 5 documents is = ", count_low_threshold ,flush=True)
+#         print("The number of times to modify document lengths after erasing tokens that appear in more than 20% of documents is = ", sum_low_threshold ,flush=True)
+        
+#         for token in high_threshold_list:
+#             print(">20% of documents= ",token,flush=True)
+
         plt.hist(list_pos_len,range=(min_pos_len,100), bins=100,color='yellow',edgecolor='red')
         plt.show()
         if save_plot and path_save_plot!=None:

@@ -321,12 +321,107 @@ def test_generator_baseline_model(file_path):
         for key,value in res.items():
             print(  "document ", key , " = " ,value,flush=True)
 
+            
+def test_filter(file_path):
+    """ Test inverse_document_method """
+    #Building inverted structure
+    print("Test inverse_document",flush=True)
+    start=time.time()
+    
+    inverted_structure=Inverted_structure()
+    document_ID='1125'
+    document_text="The boy is playing football in the street boy boy street boy"
+
+    inverted_structure.inverse_document(document_ID,document_text)
+
+
+    document_ID='1130'
+    document_text="The boy is boy reading about football reading all the time"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    
+    document_ID='1240'
+    document_text="The man is watching street football"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    document_ID='1241'
+    document_text="The boy is street in love"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    document_ID='1242'
+    document_text="love boy is in the air air air air air"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    document_ID='1243'
+    document_text="filter boy street carbon in the car air"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+    document_ID='1244'
+    document_text="street with no parking"
+    inverted_structure.inverse_document(document_ID,document_text)
+    
+
+    
+    end=time.time()
+    print("average time to inverse a document ",(end-start)/7,flush=True) 
+    print("-------------document IDs------------",flush=True)
+    for doc_ID in inverted_structure.document_IDs:
+        print('\n'+doc_ID,flush=True)
+    print("-------------Vocabulary------------",flush=True)
+    for token,value in inverted_structure.vocabulary.items():
+        print( token ," length = " ,value[0], " position= ",value[1],flush=True)
+    print("-------------Posting lists------------",flush=True)
+    i=0
+    for posting_list in inverted_structure.posting_lists:
+        print("Posting list " ,i,flush=True)
+        for elem in posting_list:
+            print(elem, ' ',flush=True)
+        i+=1 
+        print('\n',flush=True)
+    print("------------Documents length--------------",flush=True)
+    for doc_length in inverted_structure.documents_length:
+        print('\n',doc_length,flush=True)
+    #Filtering
+    print("----------------------------------------------",flush=True)
+    print("----------------------------------------------",flush=True)
+    print("----------------------------------------------",flush=True)
+    print("-------------------Filtering------------------",flush=True)
+    start=time.time()
+    inverted_structure.filter_vocabulary(minimum_occurence=2,proportion_of_frequent_words=0.5)
+    end=time.time()
+    print("average time to filter vocabulary and posting lists and docs length ",(end-start)/7,flush=True)
+    
+    print("-------------Vocabulary------------",flush=True)
+    for token,value in inverted_structure.vocabulary.items():
+        print( token ," length = " ,value[0], " position= ",value[1],flush=True)
+    print("-------------Posting lists------------",flush=True)
+    i=0
+    for posting_list in inverted_structure.posting_lists:
+        print("Posting list " ,i,flush=True)
+        for elem in posting_list:
+            print(elem, ' ',flush=True)
+        i+=1 
+        print('\n',flush=True)
+    print("------------Documents length--------------",flush=True)
+    for doc_length in inverted_structure.documents_length:
+        print('\n',doc_length,flush=True)
+    #Saving the structure
+    print("Test save structure",flush=True)
+    start=time.time()
+    inverted_structure.save(file_path)
+    end=time.time()
+    print('posting file size   :',os.path.getsize(file_path+'/posting_file'),flush=True)
+    print('vocabulary file size:',os.path.getsize(file_path+'/vocabulary'),flush=True)
+    print('document_ID file size',os.path.getsize(file_path+'/document_IDs'),flush=True)
+    print('documents_length file size',os.path.getsize(file_path+'/documents_length'),flush=True)
+    print('Time to save inverted structure ', end-start,flush=True)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file_path')
     args = parser.parse_args()
 
-    test_generator_baseline_model(args.file_path)
+    test_filter(args.file_path)
 
 
 if __name__ == "__main__":

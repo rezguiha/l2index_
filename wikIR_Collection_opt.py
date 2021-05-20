@@ -3,6 +3,7 @@ from nltk.stem import snowball
 from nltk.corpus import stopwords
 import os
 import pandas as pd
+import time
 #Files
 import utils
 from Queries import Queries
@@ -36,15 +37,28 @@ class Collection:
         self.validation_relevance = utils.read_qrels(collection_path + '/validation/qrels')
         self.test_relevance = utils.read_qrels(collection_path + '/test/qrels')
 
-    def build_inverted_index_and_vocabulary(self, file_path=None, save=True):
+    def build_inverted_index_and_vocabulary(self, file_path=None, save=True,minimum_occurence=5,proportion_of_frequent_words=0.2):
         """Function that builds the inverted index and  the vocabulary"""
         inverted_structure = Inverted_structure()
+        start=time.time()
         # Iterating over the documents
         for document_ID, document_text in self.documents.iterrows():
             inverted_structure.inverse_document(document_ID, document_text[0])
+        end=time.time()
+        number_of_documents=inverted_structure.get_number_of_documents()
+        print("Average time to inverse documents wikIR",round(((end-start)/number_ofdocuments)*1000, " ms",flush=True)
+        #Filtering vocabulary and posting lists
+        start=time.time()
+        inverted_structure.filter(minimum_occurence,proportion_of_frequent_words)  
+        end=time.time()
+        print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_ofdocuments)*1000, " ms",flush=True)
+        #Saving      
         if save and file_path != None:
             if os.path.exists(file_path):
+                start=time.time()
                 inverted_structure.save(file_path)
+                end=time.time()
+                print("Saving time wikIR",round(end-start), " s",flush=True)
             else:
                 raise IOError('Path does not exist: %s' % file_path)
         return inverted_structure
