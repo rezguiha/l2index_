@@ -9,7 +9,7 @@ source activate /home/mrim/rezguiha/anaconda3/envs/python3.7
 
 COLL_PATH=/home/mrim/rezguiha/work/repro_chap7_res/wikIR_78
 FASTTEXT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/fastText/cc.en.300.bin
-#INDEX_PATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIR_indexed
+
 INDEX_PATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIR_full_documents_indexed
 
 
