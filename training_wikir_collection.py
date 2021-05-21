@@ -5,7 +5,7 @@
 # Modified Date: March 21 2021
 # E-mail: hamdi.rezgui@grenoble-inp.org
 # Description: Code to evaluate baseline IR models without training , to do training
-# to get the TDV weights for a certain differentiable model and to evaluate baseline 
+# to get the TDV weights for a certain differentiable model and to evaluate baseline
 # IR models after taking into account the TDVs for a TREC Collection
 # =============================================================================
 
@@ -116,7 +116,7 @@ def main():
     loss_function = tf.keras.losses.Hinge()
     optimizer = tf.keras.optimizers.Adam(args.lr)
     #Loading the differentiable model used for the training #HR
-    #HR added options for different IR models. In the original version only the 
+    #HR added options for different IR models. In the original version only the
     # simple tf model was present
     if args.IR_model == 'tf':
         model = differentiable_models.diff_simple_TF(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
@@ -152,11 +152,13 @@ def main():
         for i in range(len(query_batches)):
             with tf.GradientTape() as tape:
                 # reshaping queries, pos_documents and neg_documents into a numpy  ndarray #HR
+                # i est le numéro les batchs qui on été prévu
+                # j est le numéro interne du document, il sert à acceder à la version "direct" de chaque document
+                # Tous les documents sont sous la forme d'une liste d'identifiant de vocabulaire
                 queries = tf.keras.preprocessing.sequence.pad_sequences(
                     [Collection.indexed_training_queries[j] for j in query_batches[i]], padding='post')
                 pos_documents = tf.keras.preprocessing.sequence.pad_sequences(
                     [Collection.indexed_docs[j] for j in positive_doc_batches[i]], padding='post')
-
                 neg_documents = tf.keras.preprocessing.sequence.pad_sequences(
                     [Collection.indexed_docs[j] for j in negative_doc_batches[i]], padding='post')
                 # Creating sparse querie, pos_document and neg_documents indexes #HR

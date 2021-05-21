@@ -21,6 +21,20 @@ class Inverted_structure:
         self.documents_length=arr.array('I')
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
+        self.direct_structure = Direct_structure()
+
+    def getTokenId(self,token):
+        """
+        From a string tocken retuen its id
+        If token is unkwons, add it to the vocabulary
+        """
+        if token not in self.vocabulary:
+            internal_token_ID=len(self.vocabulary)
+            self.vocabulary[token]=[1,internal_token_ID]
+            return internal_token_ID
+        else:
+            return self.vocabulary[token][1]
+
 
     def inverse_document(self,document_ID,document_text):
         """Function that updates posting lists and vocabulary from a document text and add the document ID to the list of document IDs"""
@@ -29,11 +43,15 @@ class Inverted_structure:
         internal_token_ID=len(self.vocabulary)
         tmp_dict_freq=Counter()
         #Preprocessing words and fillinf the temporary dictionary
+        self.direct_structure.documentStarting()
         for elem in document_text.split(" "):
             word=elem.lower()
             if word not in self.stop_words:
                 token=self.stemmer.stem(word)
+                token_id = self.getTokenId(token)
+                self.direct_structure.add(token_id)
                 tmp_dict_freq[token]+=1
+        self.direct_structure.documentEnding()
         #Computing the document length
         doc_length=sum(tmp_dict_freq.values())
         self.documents_length.append(doc_length)
@@ -68,7 +86,7 @@ class Inverted_structure:
         for token in self.token():
             length_of_posting_list=self.vocabulary[token][0]
             posting_list=self.posting_lists[self.vocabulary[token][1]]
-            
+
             #Calculating the frequency of the token in the collection and we stop when we exceed the minimum number of occurence
             # If the result is less than the minimum occurence it means that we need to delete that element if not we keep it
             sum_frequency_token=0
@@ -98,7 +116,7 @@ class Inverted_structure:
         del(indices_of_posting_lists_to_delete)
         #It is important to know that since Python 3.7 dictionaries are an ordered structure by insertion order
         #We're filtering the vocabulary and updating the internal token ID in the vocabulary for the whole tokens after filtering
-        
+
         for token in keys_to_delete:
             del self.vocabulary[token]
         #Iterating using a generator for yielding token from vocabulary
@@ -106,7 +124,7 @@ class Inverted_structure:
         for token in self.token():
                 self.vocabulary[token][1]=internal_token_ID
                 internal_token_ID+=1
-        print("Memory usage after deleting tokens from vocab and updating internal token ID", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)   
+        print("Memory usage after deleting tokens from vocab and updating internal token ID", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         del(keys_to_delete)
     def save(self,file_path):
         """A method that saves the posting file, the vocabulary and the document IDs"""
@@ -249,22 +267,22 @@ class Inverted_structure:
             self.c_freq[token]=0
             for i in range(length_posting_list):
                 self.c_freq[token]+=posting_list[2*i+1]/coll_length
-    
-    def compute_and_save_fasttext_embeddings(self,model_path,save_file_path):       
+
+    def compute_and_save_fasttext_embeddings(self,model_path,save_file_path):
         """Function that computes and saves the fasttext embeddings of every token in the vocabulary : vectos of 300 dimension"""
         model = fasttext.load_model(model_path)
-        with open(save_file_path+'/fasttext_embeddings','wb') as f:      
+        with open(save_file_path+'/fasttext_embeddings','wb') as f:
             for token in self.vocabulary:
                 array_embeddings=arr.array('f',model[token])
                 array_embeddings.tofile(f)
-                
+
     def load_fasttext_embeddings(self,file_path):
-        """Function that loads fasttext embeddings vectors of tokens in the vocabulary."""        
+        """Function that loads fasttext embeddings vectors of tokens in the vocabulary."""
         vocab_size = self.get_vocabulary_size()
         self.embedding_matrix = np.zeros((vocab_size, 300),dtype=np.float32)
-        with open(file_path+'/fasttext_embeddings', 'rb') as f:           
+        with open(file_path+'/fasttext_embeddings', 'rb') as f:
             index=0
-            for token in self.vocabulary: 
+            for token in self.vocabulary:
                 token_embedding=arr.array('f')
                 token_embedding.fromfile(f,300)
                 self.embedding_matrix[index] = token_embedding
@@ -308,7 +326,7 @@ class Inverted_structure:
 #         print("The number of times to modify document lengths after erasing tokens that appear in more than 20% of documents is = ", sum_high_threshold ,flush=True)
 #         print("The number of tokens that appear in less than 5 documents is = ", count_low_threshold ,flush=True)
 #         print("The number of times to modify document lengths after erasing tokens that appear in more than 20% of documents is = ", sum_low_threshold ,flush=True)
-        
+
 #         for token in high_threshold_list:
 #             print(">20% of documents= ",token,flush=True)
 
