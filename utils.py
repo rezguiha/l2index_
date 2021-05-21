@@ -288,28 +288,29 @@ def eval_baseline_index_wikir(inverted_structure,
     print("Number of test queries = ",number_test_queries,flush=True)
     print("Memory usage start eval_baseline", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
     print('--------------------tf---------------------------',flush=True)
-    ###############validation
+#     ###############validation
     
-    start=time.time()
+#     start=time.time()
 
-    baseline_model = baseline_models_and_tdv_implementation.simple_tf(validation_queries_struct,inverted_structure)
-
-
-    if not os.path.exists(results_path + '/validation/' + experiment_name + '/tf/'):
-        os.makedirs(results_path + '/validation/' + experiment_name + '/tf/')
+#     baseline_model = baseline_models_and_tdv_implementation.simple_tf(validation_queries_struct,inverted_structure)
 
 
-    metrics = compute_metrics(validation_queries_struct.queries_IDs,
-                              inverted_structure.document_IDs,
-                              validation_qrel,
-                              baseline_model,
-                              results_path + '/validation/' + experiment_name + '/tf/' + str(epoch))
+#     if not os.path.exists(results_path + '/validation/' + experiment_name + '/tf/'):
+#         os.makedirs(results_path + '/validation/' + experiment_name + '/tf/')
 
-    end=time.time()
-    print("Time for computing results and metrics TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of tf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
-    validation_plot_values['tf'][0].append(1.0)
-    validation_plot_values['tf'][1].append(metrics)
+
+#     metrics = compute_metrics(validation_queries_struct.queries_IDs,
+#                               inverted_structure.document_IDs,
+#                               validation_qrel,
+#                               baseline_model,
+#                               results_path + '/validation/' + experiment_name + '/tf/' + str(epoch))
+    
+#     end=time.time()
+#     print("Metrics TF ", metrics,flush=True)
+#     print("Time for computing results and metrics TF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+#     print("Memory usage at the end of tf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+#     validation_plot_values['tf'][0].append(1.0)
+#     validation_plot_values['tf'][1].append(metrics)
 
     ################Test
 
@@ -332,34 +333,35 @@ def eval_baseline_index_wikir(inverted_structure,
     print("Time for computing results and metrics TF test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
     print("Memory usage at the end of tf test", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
     
+    print("Metrics TF ", metrics,flush=True)
     test_plot_values['tf'][0].append(1.0)
     test_plot_values['tf'][1].append(metrics)
 
     print('-----------------------tf_idf------------------------------',flush=True)
-    #########validation
+#     #########validation
 
-    start=time.time()
+#     start=time.time()
 
-    baseline_model = baseline_models_and_tdv_implementation.tf_idf(validation_queries_struct,inverted_structure)
-
-
-
-    if not os.path.exists(results_path + '/validation/' +  experiment_name + '/tf_idf/'):
-        os.makedirs(results_path + '/validation/' +  experiment_name + '/tf_idf/')
+#     baseline_model = baseline_models_and_tdv_implementation.tf_idf(validation_queries_struct,inverted_structure)
 
 
-    metrics = compute_metrics(validation_queries_struct.queries_IDs,
-                              inverted_structure.document_IDs,
-                              validation_qrel,
-                              baseline_model,
-                              results_path + '/validation/' +  experiment_name + '/tf_idf/' + str(epoch))
 
-    end=time.time()
-    print("Time for computing results and metrics TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of tf_idf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+#     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/tf_idf/'):
+#         os.makedirs(results_path + '/validation/' +  experiment_name + '/tf_idf/')
 
-    validation_plot_values['tf_idf'][0].append(1.0)
-    validation_plot_values['tf_idf'][1].append(metrics)
+
+#     metrics = compute_metrics(validation_queries_struct.queries_IDs,
+#                               inverted_structure.document_IDs,
+#                               validation_qrel,
+#                               baseline_model,
+#                               results_path + '/validation/' +  experiment_name + '/tf_idf/' + str(epoch))
+
+#     end=time.time()
+#     print("Time for computing results and metrics TF-IDF validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+#     print("Memory usage at the end of tf_idf validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+
+#     validation_plot_values['tf_idf'][0].append(1.0)
+#     validation_plot_values['tf_idf'][1].append(metrics)
     ###########test
 
     start=time.time()
@@ -385,26 +387,26 @@ def eval_baseline_index_wikir(inverted_structure,
     test_plot_values['tf_idf'][1].append(metrics)
 
     print('--------------------------DIR----------------------------',flush=True)
-    ############validation
-    start=time.time()
+#     ############validation
+#     start=time.time()
 
-    baseline_model = baseline_models_and_tdv_implementation.dir_language_model(validation_queries_struct,inverted_structure)
+#     baseline_model = baseline_models_and_tdv_implementation.dir_language_model(validation_queries_struct,inverted_structure)
 
   
-    if not os.path.exists(results_path + '/validation/' +  experiment_name + '/DIR/'):
-        os.makedirs(results_path + '/validation/' +  experiment_name + '/DIR/')
+#     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/DIR/'):
+#         os.makedirs(results_path + '/validation/' +  experiment_name + '/DIR/')
 
-    metrics = compute_metrics(validation_queries_struct.queries_IDs,
-                              inverted_structure.document_IDs,
-                              validation_qrel,
-                              baseline_model,
-                              results_path + '/validation/' + experiment_name + '/DIR/' + str(epoch))
-    end=time.time()
-    print("Time for computing results and metrics DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of DIR validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+#     metrics = compute_metrics(validation_queries_struct.queries_IDs,
+#                               inverted_structure.document_IDs,
+#                               validation_qrel,
+#                               baseline_model,
+#                               results_path + '/validation/' + experiment_name + '/DIR/' + str(epoch))
+#     end=time.time()
+#     print("Time for computing results and metrics DIR validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+#     print("Memory usage at the end of DIR validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
-    validation_plot_values['DIR'][0].append(1.0)
-    validation_plot_values['DIR'][1].append(metrics)
+#     validation_plot_values['DIR'][0].append(1.0)
+#     validation_plot_values['DIR'][1].append(metrics)
 
     ##############test
     start=time.time()
@@ -430,28 +432,28 @@ def eval_baseline_index_wikir(inverted_structure,
     test_plot_values['DIR'][1].append(metrics)
 
     print('---------------------------BM25----------------------',flush=True)
-    ############validation
-    start=time.time()
+#     ############validation
+#     start=time.time()
 
-    baseline_model = baseline_models_and_tdv_implementation.Okapi_BM25(validation_queries_struct,inverted_structure)
-
-
-    if not os.path.exists(results_path + '/validation/' +  experiment_name + '/BM25/'):
-        os.makedirs(results_path + '/validation/' +  experiment_name + '/BM25/')
+#     baseline_model = baseline_models_and_tdv_implementation.Okapi_BM25(validation_queries_struct,inverted_structure)
 
 
-    metrics = compute_metrics(validation_queries_struct.queries_IDs,
-                              inverted_structure.document_IDs,
-                              validation_qrel,
-                              baseline_model,
-                              results_path + '/validation/' +  experiment_name + '/BM25/' + str(epoch))
+#     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/BM25/'):
+#         os.makedirs(results_path + '/validation/' +  experiment_name + '/BM25/')
 
-    end=time.time()
-    print("Time for computing results and metrics BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of BM25 validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
-    validation_plot_values['BM25'][0].append(1.0)
-    validation_plot_values['BM25'][1].append(metrics)
+#     metrics = compute_metrics(validation_queries_struct.queries_IDs,
+#                               inverted_structure.document_IDs,
+#                               validation_qrel,
+#                               baseline_model,
+#                               results_path + '/validation/' +  experiment_name + '/BM25/' + str(epoch))
+
+#     end=time.time()
+#     print("Time for computing results and metrics BM25 validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+#     print("Memory usage at the end of BM25 validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+
+#     validation_plot_values['BM25'][0].append(1.0)
+#     validation_plot_values['BM25'][1].append(metrics)
 
     ############test
     start=time.time()
@@ -476,28 +478,28 @@ def eval_baseline_index_wikir(inverted_structure,
     test_plot_values['BM25'][1].append(metrics)
 
     print('--------------------------JM------------------------------',flush=True)
-    ##########validation
-    start=time.time()
+#     #########validation
+#     start=time.time()
 
-    baseline_model = baseline_models_and_tdv_implementation.JM_language_model(validation_queries_struct,inverted_structure)
-
- 
-    if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
-        os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
+#     baseline_model = baseline_models_and_tdv_implementation.JM_language_model(validation_queries_struct,inverted_structure)
 
  
-    metrics = compute_metrics(validation_queries_struct.queries_IDs,
-                              inverted_structure.document_IDs,
-                              validation_qrel,
-                              baseline_model,
-                              results_path + '/validation/' +  experiment_name + '/JM/' + str(epoch))
-    end=time.time()
-    print("Time for computing results and metrics JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of JM validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+#     if not os.path.exists(results_path + '/validation/' +  experiment_name + '/JM/'):
+#         os.makedirs(results_path + '/validation/' +  experiment_name + '/JM/')
+
+ 
+#     metrics = compute_metrics(validation_queries_struct.queries_IDs,
+#                               inverted_structure.document_IDs,
+#                               validation_qrel,
+#                               baseline_model,
+#                               results_path + '/validation/' +  experiment_name + '/JM/' + str(epoch))
+#     end=time.time()
+#     print("Time for computing results and metrics JM validation ",((end-start)/number_val_queries)*1000, "ms",flush=True)
+#     print("Memory usage at the end of JM validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
 
-    validation_plot_values['JM'][0].append(1.0)
-    validation_plot_values['JM'][1].append(metrics)
+#     validation_plot_values['JM'][0].append(1.0)
+#     validation_plot_values['JM'][1].append(metrics)
 
     ##########test
     start=time.time()
@@ -516,7 +518,7 @@ def eval_baseline_index_wikir(inverted_structure,
                               results_path + '/test/' +  experiment_name + '/JM/' + str(epoch))
     end=time.time()
     print("Time for computing results and metrics JM test ",((end-start)/number_test_queries)*1000, "ms",flush=True)
-    print("Memory usage at the end of DIR validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+    print("Memory usage at the end of JM validation", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
     test_plot_values['JM'][0].append(1.0)
     test_plot_values['JM'][1].append(metrics)

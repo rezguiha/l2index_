@@ -14,7 +14,7 @@ INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIR_full_documents_indexe
 RESULT_PLOT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/test_evaluation_wikIR/
 
 # COLLPATH=/home/mrim/rezguiha/work/repro_chap7_res/mini_wikIR_78/
-# INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/mini_indexed_wikIR/indexed_collection
+# INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/mini_indexed_wikIR
 
 # RESULT_PLOT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/test_evaluation_wikIR/
 

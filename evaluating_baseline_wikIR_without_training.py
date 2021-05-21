@@ -82,6 +82,8 @@ def main():
     start=time.time()
     with open(args.coll_path + 'test/qrels', 'r') as f_qrel:
         test_qrel = pytrec_eval.parse_qrel(f_qrel)
+    end=time.time()
+
     print("Time to load test qrels ",end-start,flush=True) 
     print('------------------------------start--------------------------',flush=True)
 
@@ -104,8 +106,8 @@ def main():
                        'tf_idf',
                        'DIR',
                        'BM25', 'JM']:
-        ndcg5_val[model_name] = validation_plot_values[model_name][1][0]['ndcg_cut_5']
-        print("ndcg5 validation ",model_name," of collection ",os.path.basename(args.coll_path)," ",ndcg5_val[model_name] ,flush=True)
+#         ndcg5_val[model_name] = validation_plot_values[model_name][1][0]['ndcg_cut_5']
+#         print("ndcg5 validation ",model_name," of collection ",os.path.basename(args.coll_path)," ",ndcg5_val[model_name] ,flush=True)
         ndcg5_test[model_name] = test_plot_values[model_name][1][0]['ndcg_cut_5']
         print("ndcg5 test ",model_name," of collection ",os.path.basename(args.coll_path)," ",ndcg5_test[model_name] ,flush=True)
 
