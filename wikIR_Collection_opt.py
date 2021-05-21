@@ -49,7 +49,7 @@ class Collection:
         print("Average time to inverse documents wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Filtering vocabulary and posting lists
         start=time.time()
-        inverted_structure.filter(minimum_occurence,proportion_of_frequent_words)  
+        inverted_structure.filter_vocabulary(minimum_occurence,proportion_of_frequent_words)  
         end=time.time()
         print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Saving      
@@ -84,7 +84,7 @@ class Collection:
                 raise IOError('Path does not exist: %s' % file_path)
                 # Processing test queries
         test_queries = Queries()
-        for query_ID, query_text in self.validation_queries.iterrows():
+        for query_ID, query_text in self.test_queries.iterrows():
             test_queries.process_query_and_get_ID(query_ID, query_text[0])
         if save and file_path != None:
             if os.path.exists(file_path):
