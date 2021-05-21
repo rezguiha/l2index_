@@ -4,6 +4,7 @@ def test_statistics_inverted_structure(indexed_path,path_to_save_plot):
     inverted_structure=Inverted_structure()
     inverted_structure.load(indexed_path)
     inverted_structure.statistics_about_the_structure(path_to_save_plot)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--indexed_path')
