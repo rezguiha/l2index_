@@ -43,14 +43,31 @@ def std_tokenizer_build_standard_vocabulary(queries, documents, min_occ=2, limit
 
 
 def std_tokenizer_index(pdDataFrame, vocabulary, stemmer=None):
-    """Indexes a dataframe either documents or queries for example according to a vocabulary.
-    While doing that it can perform a stemmerization if the vocabulary was built on words that got stemmerized""" #HR
+    """
+    ATTENTION : ne plus utiliser, utiliser à la place la classe Inverted_structure.py
+    CETTE FONCTION DE FAIT PAS D'INDEXATION : elle met simplement en forme uen collection
+    Cette fonction a l'inconvéniant de mettre en mémoire en double toute la collection !!
+    Ancienne fonction de Jibril qui tranforme la colletions en la structucture suivante :
+        - une liste de documents conteniant la liste des identidiants des tocken
+        - un point
+    Le paramètre vocabulary sert a filtrer les termes des documents.
+    pdDataFrame : le corpus, c'est à dire le texte et l'identifiant de tous les documents
+    vocabulary : un dictionnaire qui doit contenir un identifiant (entier) de chaque tocken du vocabulaire
+    Cette fonction construit deux structures :
+    - index : (nom et structure mal choisi) stocke l'association identifiant exeterne et interne du document
+    - indexed_elements : la collection mise sous la forme d'identifiants de documents
+    Indexes a dataframe either documents or queries for example according to a vocabulary.
+    While doing that it can perform a stemmerization if the vocabulary was built on words that got stemmerized
+    """ #HR
     indexed_elements = []
     index = dict()
     count = 0
     if stemmer is None:
         # Run across all document collection
+        # key est l'identifiant de chaque document
         for key, element in pdDataFrame.iterrows():
+            # Prend chaque terme du document, passe en minuscules, puis si le tocken est dans le vocabulaire
+            # le transforme en son
             indexed_elements.append(
                 [vocabulary[elem.lower()] for elem in element[0].split(" ") if elem.lower() in vocabulary])
             index[str(key)] = count
