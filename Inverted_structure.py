@@ -8,6 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import fasttext
 import resource
+import time
+#Files
+from Direct_structure import Direct_structure
 #Defintion of Inverted structure class
 class Inverted_structure:
     def __init__(self):
@@ -26,50 +29,47 @@ class Inverted_structure:
     def getTokenId(self,token):
         """
         From a string tocken retuen its id
-        If token is unkwons, add it to the vocabulary
+        If token is unknow, add it to the vocabulary
+        Warning: This method creates an empty posting list and adds it to the list of the posting lists too.
         """
         if token not in self.vocabulary:
             internal_token_ID=len(self.vocabulary)
-            self.vocabulary[token]=[1,internal_token_ID]
+            #updating the vocabulary with the new token.[length of posting list=0,position in the posting file=internal token ID]
+            self.vocabulary[token]=[0,internal_token_ID]
+            #creating an empty posting list to be filled later
+            posting_list=arr.array('I')
+            self.posting_lists.append(posting_list)
             return internal_token_ID
         else:
             return self.vocabulary[token][1]
 
 
     def inverse_document(self,document_ID,document_text):
-        """Function that updates posting lists and vocabulary from a document text and add the document ID to the list of document IDs"""
+        """Function that updates posting lists and vocabulary from a document text,builds a processed document to add to the direct structure and add the document ID to the list of document IDs and document length to the document length's array """
         self.document_IDs.append(document_ID)
         internal_doc_ID=len(self.document_IDs)-1
         internal_token_ID=len(self.vocabulary)
         tmp_dict_freq=Counter()
-        #Preprocessing words and fillinf the temporary dictionary
-        self.direct_structure.documentStarting()
+        processed_document=arr.array('I')
+        
+        #Preprocessing words, filling up the processed document and adding it to the direct structure, and fills the temporary dictionary to use later for updating the posting lists
         for elem in document_text.split(" "):
             word=elem.lower()
             if word not in self.stop_words:
                 token=self.stemmer.stem(word)
-                token_id = self.getTokenId(token)
-                self.direct_structure.add(token_id)
+                #building the processed document for the document structure
+                token_id=self.getTokenId(token)
+                processed_document.append(token_id)
                 tmp_dict_freq[token]+=1
-        self.direct_structure.documentEnding()
-        #Computing the document length
+        self.direct_structure.add_document(processed_document)
+        #Computing the document length and adding it to the array of documents' length
         doc_length=sum(tmp_dict_freq.values())
         self.documents_length.append(doc_length)
         #Creating or updating the vocabulary and the posting lists
         for token,frequency in tmp_dict_freq.items():
-            if token not in self.vocabulary:
-                #Updating vocabulary with the new token [length of posting list=1,position in the posting file=internal token ID]
-                self.vocabulary[token]=[1,internal_token_ID]
-                #Creating an array of type unsigned int contraining a single input since the word is not in the vocabulary
-                posting_list=arr.array('I', [internal_doc_ID,frequency])
-                #Appending the new posting list
-                self.posting_lists.append(posting_list)
-                #Incrementing to get the next position
-                internal_token_ID+=1
-            else:
                 #Updating length of posting list corresponding to the token
                 self.vocabulary[token][0]+=1
-                #Getting the position of the posting list
+                #Getting the position of the posting list which is the internal token id
                 pos=self.vocabulary[token][1]
                 #Extending the posting list to include the document ID and the frequency in the document
                 self.posting_lists[pos].extend([internal_doc_ID,frequency])
@@ -103,17 +103,8 @@ class Inverted_structure:
             index_token+=1
         print("Memory usage after filling indices and tokens to delete", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
-        #The indices of posting lists to delete are in an ascending order. But we need to go through it in reverse. So that, deleting elements doesn't modify the indices of the list. To do that we reverse the list of indices to delete using reverse iteration with the reversed() built-in . It neither reverses a list in-place, nor does it create a full copy. Instead we get a reverse iterator we can use to cycle through the elements of the list in reverse order
-        #We also do an update on the document_lengths. This is an inefficient way to do it. We can do better
-        index_to_delete_gen=(i for i in reversed(indices_of_posting_lists_to_delete))
-        for i in index_to_delete_gen:
-            posting_list_gen=(j for j in range(int(len(self.posting_lists[i])/2)))
-            for j in posting_list_gen:
-                self.documents_length[self.posting_lists[i][2*j]]-=self.posting_lists[i][2*j+1]
-            del self.posting_lists[i]
-
-        print("Memory usage after deleting posting lists and updating document lengths", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
-        del(indices_of_posting_lists_to_delete)
+ 
+        
         #It is important to know that since Python 3.7 dictionaries are an ordered structure by insertion order
         #We're filtering the vocabulary and updating the internal token ID in the vocabulary for the whole tokens after filtering
 
@@ -121,11 +112,44 @@ class Inverted_structure:
             del self.vocabulary[token]
         #Iterating using a generator for yielding token from vocabulary
         internal_token_ID=0
+        previous_internal_token_ID=arr.array('I')
         for token in self.token():
-                self.vocabulary[token][1]=internal_token_ID
-                internal_token_ID+=1
+            previous_internal_token_ID.append(self.vocabulary[token][1])
+            self.vocabulary[token][1]=internal_token_ID
+            internal_token_ID+=1
         print("Memory usage after deleting tokens from vocab and updating internal token ID", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         del(keys_to_delete)
+        
+      
+        #Going over the processed documents and filtering the tokens and updating the tokens' new internal token ID and updating the documents' length
+        print("Size of processed documents ", len(self.direct_structure.processed_documents),flush=True)
+        start=time.time()
+        processed_document_index_gen=(i for i in range(self.get_number_of_documents()))
+        total_number_of_elements_deleted=0
+        position=0
+        for i in processed_document_index_gen:     
+            document_number_of_elements_deleted=0
+            for j in range(self.documents_length[i]): 
+                if self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted] not in previous_internal_token_ID:
+                    self.direct_structure.processed_documents.pop(j+position-total_number_of_elements_deleted)
+                    total_number_of_elements_deleted+=1
+                    document_number_of_elements_deleted+=1
+                else:
+                    self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted]=previous_internal_token_ID.index(self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted])
+            position+=self.documents_length[i]
+            self.documents_length[i]-=document_number_of_elements_deleted
+        end=time.time()
+        print("Time to filter direct structure =",round(end-start),flush=True)
+                    
+        print("Memory usage after filtering tokens from processed documents and updating documents's length", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+        
+        #The indices of posting lists to delete are in an ascending order. But we need to go through it in reverse. So that, deleting elements doesn't modify the indices of the list. To do that we reverse the list of indices to delete using reverse iteration with the reversed() built-in . It neither reverses a list in-place, nor does it create a full copy. Instead we get a reverse iterator we can use to cycle through the elements of the list in reverse order
+        index_to_delete_gen=(i for i in reversed(indices_of_posting_lists_to_delete))
+        for i in index_to_delete_gen:
+            del self.posting_lists[i]
+
+        print("Memory usage after deleting posting lists", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+        del(indices_of_posting_lists_to_delete)
     def save(self,file_path):
         """A method that saves the posting file, the vocabulary and the document IDs"""
         #Writing the posting file
@@ -143,7 +167,8 @@ class Inverted_structure:
         #Saving the documents length
         with open(file_path+'/documents_length','wb') as f:
             self.documents_length.tofile(f)
-
+        #Saving directed structure
+        self.direct_structure.saving_all_documents(file_path)   
     def load(self,file_path):
         """Function that loads the posting lists , vocabulary and document IDs"""
         #Initializing the objects to contain the posting lists,vocabulary and document IDs

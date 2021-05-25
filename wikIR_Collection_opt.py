@@ -38,7 +38,7 @@ class Collection:
         self.test_relevance = utils.read_qrels(collection_path + '/test/qrels')
 
     def build_inverted_index_and_vocabulary(self, file_path=None, save=True,minimum_occurence=5,proportion_of_frequent_words=0.2):
-        """Function that builds the inverted index and  the vocabulary"""
+        """Function that builds the inverted index ,the vocabulary ,posting lists,documents_length and direct structure and filters them"""
         inverted_structure = Inverted_structure()
         start=time.time()
         # Iterating over the documents
@@ -46,12 +46,14 @@ class Collection:
             inverted_structure.inverse_document(document_ID, document_text[0])
         end=time.time()
         number_of_documents=inverted_structure.get_number_of_documents()
+        print("Total time to inverse documents wikIR",round(end-start), " s",flush=True)
         print("Average time to inverse documents wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Filtering vocabulary and posting lists
         start=time.time()
         inverted_structure.filter_vocabulary(minimum_occurence,proportion_of_frequent_words)  
         end=time.time()
-        print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
+        print("Total time to filter vocabulary,posting lists,direct_structure and update document lengths wikIR",round(end-start), " s",flush=True)
+        print("Average time to filter vocabulary,posting lists,direct_structure and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Saving      
         if save and file_path != None:
             if os.path.exists(file_path):
