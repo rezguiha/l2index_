@@ -49,7 +49,7 @@ def main():
     start=time.time()
     Collection = TrecCollection()
     Collection.load_folds_queries(args.coll_path)
-    folds_processed_queries=Collection.process_queries()
+    folds_processed_queries=Collection.process_queries(vocabulary=inverted_structure.vocabulary)
     end=time.time()
     print("Time to load queries and process them ",end-start,flush=True) 
     

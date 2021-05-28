@@ -14,7 +14,7 @@ import time
 #Code files
 import utils
 import wikIR_Collection_opt
-import Inverted_structure
+import Inverted_structure2
 
 
 def main():
@@ -56,7 +56,7 @@ def main():
 
     #Loading indexed_structure#HR
     start=time.time()
-    inverted_structure=Inverted_structure.Inverted_structure()
+    inverted_structure=Inverted_structure2.Inverted_structure()
     inverted_structure.load(args.indexed_path)
     end=time.time()
     print("Time for loading indexed wikIR collection ",end-start,flush=True)
@@ -70,7 +70,7 @@ def main():
     start=time.time()
     Collection = wikIR_Collection_opt.Collection()
     Collection.load_queries(args.coll_path)
-    _,validation_queries_struct,test_queries_struct=Collection.process_queries()
+    _,validation_queries_struct,test_queries_struct=Collection.process_queries(vocabulary=inverted_structure.vocabulary)
     end=time.time()
     print("Time to load queries and process them ",end-start,flush=True) 
     #Loading validation and test query relavance values #HR

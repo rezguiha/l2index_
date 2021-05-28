@@ -224,11 +224,11 @@ class TrecCollection:
         return inverted_structure
     
     
-    def process_queries(self, file_path=None, save=False):
+    def process_queries(self, file_path=None, save=False,vocabulary):
         # Processing training queries
         folds_processed_queries=[]
         for i in range(self.k):
-            processed_queries = Queries()
+            processed_queries = Queries(vocabulary)
             for query_ID, query_text in self.folds_queries[i].iterrows():
                 processed_queries.process_query_and_get_ID(query_ID, query_text[0])
             folds_processed_queries.append(processed_queries)

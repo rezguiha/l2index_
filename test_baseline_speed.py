@@ -46,7 +46,7 @@ def main():
     start=time.time()
     Collection = wikIR_Collection_opt.Collection()
     Collection.load_queries(args.coll_path)
-    _,_,test_queries_struct=Collection.process_queries()
+    _,_,test_queries_struct=Collection.process_queries(inverted_structure.vocabulary)
     end=time.time()
     print("Time to load queries and process them ",end-start,flush=True) 
 
