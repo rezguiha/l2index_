@@ -2,29 +2,41 @@
 import pickle
 from nltk.stem import snowball
 from nltk.corpus import stopwords
+import array as arr
 
 ### Definition of class queries
 class Queries:
-    def __init__(self):
+    def __init__(self,vocabulary):
         # External queries id, the position in this list is internal doc Id
         self.queries_IDs=[]
         # A list containing the processed queries which are a list of tokens
-        self.processed_queries=[]
+        self.queries=[]
         # Stemmer and stop words
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
+        #vocabulary is the structure that we build in inverted structure
+        self.vocabulary=vocabulary
+        #direct structure for queries
+        self.direct_queries=[]
+        
+    
     def process_query_and_get_ID(self,query_external_ID,non_processed_query_text):
         """Function that adds the external query ID to the list and processes the query and adds it to the processed queries list"""
         #Adding the exteral query ID
         self.queries_IDs.append(str(query_external_ID))
         query=[]
+        direct_query=[]
         #Processing the query
         for elem in non_processed_query_text.split(" "):
             word=elem.lower()
-            if word not in self.stop_words:
-                token=self.stemmer.stem(word)
+            token=self.stemmer.stem(word)
+            if token in self.vocabulary:
                 query.append(token)
-        self.processed_queries.append(query)
+                #Adding the internal token id of the vocabulary to build the direct structure of the queries
+                direct_query.append(self.vocabulary[token][1])
+        self.queries.append(query)
+        self.direct_queries.append(direct_query)
+        
     def get_number_of_queries(self):
         return len(self.queries_IDs)
     def get_external_ID_of_query(self,internal_query_ID):
@@ -47,8 +59,8 @@ class Queries:
         else:
             return internal_document_ID
     def query(self):
-        """Access all processed_queries as a generator """
-        for query in self.processed_queries:
+        """Access all queries as a generator """
+        for query in self.queries:
             yield query
     def save(self,file_path,name_of_file):
         """Saving External queries ID and processed queries"""
@@ -56,14 +68,19 @@ class Queries:
         #Saving external queries ID
         with open(file_path+'/'+name_of_file+'_queries_IDs', 'wb') as f:
             pickle.dump(self.queries_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)
-        #Saving processed queries
+        #Saving queries 
         with open(file_path+'/'+name_of_file+'_queries', 'wb') as f:
-            pickle.dump(self.processed_queries, f, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.queries, f, protocol=pickle.HIGHEST_PROTOCOL)
+        #Saving direct queries
+        with open(file_path+'/'+name_of_file+'_direct_queries', 'wb') as f:
+            pickle.dump(self.direct_queries, f, protocol=pickle.HIGHEST_PROTOCOL)
     def load(self,file_path,name_of_file):
-        """ Loading queries IDs and processed queries"""
+        """ Loading queries IDs and queries and direct queries"""
         self.queries_IDs=[]
-        self.processed_queries=[]
+        self.queries=[]
         with open(file_path+'/'+name_of_file+'_queries_IDs', 'rb') as f:
             self.queries_IDs=pickle.load(f)
         with open(file_path+'/'+name_of_file+'_queries', 'rb') as f:
-            self.processed_queries=pickle.load(f)
+            self.queries=pickle.load(f)
+        with open(file_path+'/'+name_of_file+'_direct_queries', 'rb') as f:
+            self.direct_queries=pickle.load(f)

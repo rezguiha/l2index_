@@ -19,19 +19,35 @@ def are_equal_query_IDs(queries1,queries2):
                 print( " mismatch at position ", i, " in Doc_IDs",flush=True)
                 return False
     return True
-def are_equal_processed_queries(queries1,queries2):
+def are_equal_queries(queries1,queries2):
     #Equality of processed queries
-    if len(queries1.processed_queries)!= len(queries2.processed_queries):
-        print("Processed queries size does not match",flush=True)
+    if len(queries1.queries)!= len(queries2.queries):
+        print("queries size does not match",flush=True)
         return False
     else:
-        for i in range(len(queries1.processed_queries)):
-            if len(queries1.processed_queries[i])!= len(queries2.processed_queries[i]):
-                print("processed query ",i," size does not match",flush=True)
+        for i in range(len(queries1.queries)):
+            if len(queries1.queries[i])!= len(queries2.queries[i]):
+                print("query ",i," size does not match",flush=True)
                 return False
             else:
-                for j in range(len(queries1.processed_queries[i])):
-                    if queries1.processed_queries[i][j]!=queries2.processed_queries[i][j]:
+                for j in range(len(queries1.queries[i])):
+                    if queries1.queries[i][j]!=queries2.queries[i][j]:
+                        print( " mismatch at query ", i, " in position ",j,flush=True)
+                        return False
+    return True
+def are_equal_direct_queries(queries1,queries2):
+    #Equality of processed queries
+    if len(queries1.direct_queries)!= len(queries2.direct_queries):
+        print("direct queries size does not match",flush=True)
+        return False
+    else:
+        for i in range(len(queries1.direct_queries)):
+            if len(queries1.direct_queries[i])!= len(queries2.direct_queries[i]):
+                print("direct query ",i," size does not match",flush=True)
+                return False
+            else:
+                for j in range(len(queries1.direct_queries[i])):
+                    if queries1.queries[i][j]!=queries2.queries[i][j]:
                         print( " mismatch at query ", i, " in position ",j,flush=True)
                         return False
     return True
@@ -39,7 +55,13 @@ def are_equal_processed_queries(queries1,queries2):
 def test_Queries_class(file_path):
     print("Test Queries",flush=True)
     start=time.time()
-    queries=Queries()
+    vocabulary=dict()
+    vocabulary["footbal"]=[0,1]
+    vocabulary["boy"]=[0,2]
+    vocabulary["book"]=[0,3]
+    vocabulary["game"]=[0,4]
+    vocabulary["avocado"]=[0,5]
+    queries=Queries(vocabulary)
     query1= "Is the boy fond of street football"
     query1_ID='1000'
     queries.process_query_and_get_ID(query1_ID,query1)
@@ -60,12 +82,19 @@ def test_Queries_class(file_path):
     print("-------------queries IDs------------",flush=True)
     for query_ID in queries.queries_IDs:
         print('\n'+query_ID,flush=True)
-    print("-----------processed queries-----------", flush=True)
+    print("----------- queries-----------", flush=True)
     i=0
-    for query in queries.processed_queries:
+    for query in queries.queries:
         print ("----query ",i,flush=True)
         for token in query:
             print('\n'+ token,flush=True)
+        i+=1
+    print("-----------direct queries-----------", flush=True)
+    i=0
+    for direct_query in queries.direct_queries:
+        print ("----query ",i,flush=True)
+        for token_id in direct_query:
+            print('\n'+ str(token_id),flush=True)
         i+=1
      #Saving the structure
     print("Test save Queries",flush=True)
@@ -78,7 +107,7 @@ def test_Queries_class(file_path):
      #Loading the queries
     print("Test load queries",flush=True)      
     start=time.time()
-    queries2=Queries()
+    queries2=Queries(vocabulary)
     queries2.load(file_path,"uni_test")                                             
     end=time.time()
     print('Time to load queries ', end-start,flush=True) 
@@ -88,69 +117,76 @@ def test_Queries_class(file_path):
         print("The save and load query IDs were successful",flush=True)
     else:
         print("The save and load query IDs were not successful",flush=True)
-    if are_equal_processed_queries(queries,queries2):
-        print("The save and load processed queries were successful",flush=True)
+    if are_equal_queries(queries,queries2):
+        print("The save and load  queries were successful",flush=True)
     else:
-        print("The save and load  processed queries were not successful",flush=True)
-def test_Queries_class_random_queries(file_path,average_length_query):
-    print("-----------------Test Queries randomly generated------------",flush=True)
-    #Building queries instance
+        print("The save and load  queries were not successful",flush=True)
+    if are_equal_direct_queries(queries,queries2):
+        print("The save and load direct queries were successful",flush=True)
+    else:
+        print("The save and load direct queries were not successful",flush=True)   
+   
 
-    #Generate queries with the same average length of queries of Wikir Collection or WikirS collection
-    start0=time.time()
-    query_list=[]
-    query_ID_list=[]
-    for i in range(20000):
-        query_ID=str(randint(1000,10000))
-        query=' '.join(sample(words.words(), average_length_query))
-        query_ID_list.append(query_ID)
-        query_list.append(query)
-    print("Time to generate documents" , time.time()-start0,flush=True)
-    start=time.time()
-    queries=Queries()
+""" This is a test for the old version of the class queries without the directed structure"""    
+# def test_Queries_class_random_queries(file_path,average_length_query):
+#     print("-----------------Test Queries randomly generated------------",flush=True)
+#     #Building queries instance
+
+#     #Generate queries with the same average length of queries of Wikir Collection or WikirS collection
+#     start0=time.time()
+#     query_list=[]
+#     query_ID_list=[]
+#     for i in range(20000):
+#         query_ID=str(randint(1000,10000))
+#         query=' '.join(sample(words.words(), average_length_query))
+#         query_ID_list.append(query_ID)
+#         query_list.append(query)
+#     print("Time to generate documents" , time.time()-start0,flush=True)
+#     start=time.time()
+#     queries=Queries()
     
-    for i in range (len(query_ID_list)):
-        queries.process_query_and_get_ID(query_ID_list[i],query_list[i])
+#     for i in range (len(query_ID_list)):
+#         queries.process_query_and_get_ID(query_ID_list[i],query_list[i])
     
-    end=time.time()
-    print("average time to process queries ",((end-start)/len(query_ID_list))*1000,' ms',flush=True) 
+#     end=time.time()
+#     print("average time to process queries ",((end-start)/len(query_ID_list))*1000,' ms',flush=True) 
     
     
-     #Saving the structure
-    print("Test save Queries",flush=True)
-    start=time.time()
-    queries.save(file_path,"uni_test")
-    end=time.time()
-    print("Time for save ", end-start,'s',flush=True)
-    print('query IDs file size   :',os.path.getsize(file_path+'/'+'uni_test'+'_queries_IDs'),flush=True)
-    print('processed queries file size:',os.path.getsize(file_path+'/'+'uni_test'+'_queries'),flush=True)       
-     #Loading the queries
-    print("Test load queries",flush=True)      
-    start=time.time()
-    queries2=Queries()
-    queries2.load(file_path,"uni_test")                                             
-    end=time.time()
-    print('Time to load queries ', end-start,' s',flush=True) 
+#      #Saving the structure
+#     print("Test save Queries",flush=True)
+#     start=time.time()
+#     queries.save(file_path,"uni_test")
+#     end=time.time()
+#     print("Time for save ", end-start,'s',flush=True)
+#     print('query IDs file size   :',os.path.getsize(file_path+'/'+'uni_test'+'_queries_IDs'),flush=True)
+#     print('processed queries file size:',os.path.getsize(file_path+'/'+'uni_test'+'_queries'),flush=True)       
+#      #Loading the queries
+#     print("Test load queries",flush=True)      
+#     start=time.time()
+#     queries2=Queries()
+#     queries2.load(file_path,"uni_test")                                             
+#     end=time.time()
+#     print('Time to load queries ', end-start,' s',flush=True) 
     
-    print("Cheking for load and save of queries",flush=True) 
-    start=time.time()
-    if are_equal_query_IDs(queries,queries2):
-        print("The save and load query IDs were successful",flush=True)
-    else:
-        print("The save and load query IDs were not successful",flush=True)
-    if are_equal_processed_queries(queries,queries2):
-        print("The save and load processed queries were successful",flush=True)
-    else:
-        print("The save and load  processed queries were not successful",flush=True)
-    end=time.time()
-    print("Time to do checking of save and load ",end-start,' s',flush=True)
-    print("Total time ", end-start0, ' s',flush=True)
+#     print("Cheking for load and save of queries",flush=True) 
+#     start=time.time()
+#     if are_equal_query_IDs(queries,queries2):
+#         print("The save and load query IDs were successful",flush=True)
+#     else:
+#         print("The save and load query IDs were not successful",flush=True)
+#     if are_equal_queries(queries,queries2):
+#         print("The save and load processed queries were successful",flush=True)
+#     else:
+#         print("The save and load  processed queries were not successful",flush=True)
+#     end=time.time()
+#     print("Time to do checking of save and load ",end-start,' s',flush=True)
+#     print("Total time ", end-start0, ' s',flush=True)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file_path')
     args = parser.parse_args()
 
-    test_Queries_class_random_queries(args.file_path,10)
+    test_Queries_class(args.file_path)
 
 
 if __name__ == "__main__":
