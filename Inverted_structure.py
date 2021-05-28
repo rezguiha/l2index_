@@ -64,7 +64,7 @@ class Inverted_structure:
         self.direct_structure.add_document(processed_document)
         #Computing the document length and adding it to the array of documents' length
         doc_length=sum(tmp_dict_freq.values())
-        self.documents_length.append(doc_length)
+        self.direct_structure.doc_length.append(doc_length)
         #Creating or updating the vocabulary and the posting lists
         for token,frequency in tmp_dict_freq.items():
                 #Updating length of posting list corresponding to the token
@@ -79,8 +79,10 @@ class Inverted_structure:
         """Function that filters tokens from vocabulary and posting lists that have an occurence less than minimum_occurence or that are present in more than proportion_of_frequent_words of documents. These tokens will likely be not very useful for the retrieval objective"""
         number_of_documents=self.get_number_of_documents()
         indices_of_posting_lists_to_delete=arr.array('I')
-        keys_to_delete=[]
+        vocabulary_table=arr.array('I')
+        tokens_to_delete=[]
         index_token=0
+        new_index_token=0
         print("Memory usage start filter_inverted_structure", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         #Iterating using a generator of tokens
         for token in self.token():
@@ -96,52 +98,41 @@ class Inverted_structure:
                 index_post+=1
             #Storing indices of posting lists and tokens to erase from the vocabulary and the posting lists
             if (sum_frequency_token <minimum_occurence) or (length_of_posting_list>proportion_of_frequent_words*number_of_documents):
-                #Storing token=key to delete from vocabulary from the vocabulary
-                keys_to_delete.append(token)
+                #Storing token to delete from vocabulary from the vocabulary
+                tokens_to_delete.append(token)
                 #Storing indices of posting lists to delete. We can't delete them one by one because the indices will change when we do that
                 indices_of_posting_lists_to_delete.append(index_token)
+                vocabulary_table.append(0xffffffff)
+            else:
+                vocabulary_table.append(new_index_token)
+                new_index_token+=1
             index_token+=1
-        print("Memory usage after filling indices and tokens to delete", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+                #vocabulary table is an array for each token identified by its internal ID corresponds 0xffffffff if we are going to delete the token or the new internal token otherwise. It enables instant access which is very fast. It can take up a bit more memory though
+        print("Memory usage after filling indices ,vocabulary table and tokens to delete", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
 
  
         
         #It is important to know that since Python 3.7 dictionaries are an ordered structure by insertion order
         #We're filtering the vocabulary and updating the internal token ID in the vocabulary for the whole tokens after filtering
 
-        for token in keys_to_delete:
+        for token in tokens_to_delete:
             del self.vocabulary[token]
         #Iterating using a generator for yielding token from vocabulary
         internal_token_ID=0
         previous_internal_token_ID=arr.array('I')
         for token in self.token():
-            previous_internal_token_ID.append(self.vocabulary[token][1])
             self.vocabulary[token][1]=internal_token_ID
             internal_token_ID+=1
         print("Memory usage after deleting tokens from vocab and updating internal token ID", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
-        del(keys_to_delete)
+        del(tokens_to_delete)
         
       
         #Going over the processed documents and filtering the tokens and updating the tokens' new internal token ID and updating the documents' length
-        print("Size of processed documents ", len(self.direct_structure.processed_documents),flush=True)
         start=time.time()
-        processed_document_index_gen=(i for i in range(self.get_number_of_documents()))
-        total_number_of_elements_deleted=0
-        position=0
-        for i in processed_document_index_gen:     
-            document_number_of_elements_deleted=0
-            for j in range(self.documents_length[i]): 
-                if self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted] not in previous_internal_token_ID:
-                    self.direct_structure.processed_documents.pop(j+position-total_number_of_elements_deleted)
-                    total_number_of_elements_deleted+=1
-                    document_number_of_elements_deleted+=1
-                else:
-                    self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted]=previous_internal_token_ID.index(self.direct_structure.processed_documents[j+position-total_number_of_elements_deleted])
-            position+=self.documents_length[i]
-            self.documents_length[i]-=document_number_of_elements_deleted
+        self.direct_structure.filter_vocabulary(vocabulary_table)
         end=time.time()
-        print("Time to filter direct structure =",round(end-start),flush=True)
-                    
-        print("Memory usage after filtering tokens from processed documents and updating documents's length", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
+        print("Time to filter the directed structure and update document length= ",round(end-start),flush=True)
+        print("Memory usage after filtering directed structure and update document length", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         
         #The indices of posting lists to delete are in an ascending order. But we need to go through it in reverse. So that, deleting elements doesn't modify the indices of the list. To do that we reverse the list of indices to delete using reverse iteration with the reversed() built-in . It neither reverses a list in-place, nor does it create a full copy. Instead we get a reverse iterator we can use to cycle through the elements of the list in reverse order
         index_to_delete_gen=(i for i in reversed(indices_of_posting_lists_to_delete))
@@ -166,7 +157,7 @@ class Inverted_structure:
 
         #Saving the documents length
         with open(file_path+'/documents_length','wb') as f:
-            self.documents_length.tofile(f)
+            self.direct_structure.doc_length.tofile(f)
         #Saving directed structure
         self.direct_structure.saving_all_documents(file_path)   
     def load(self,file_path):

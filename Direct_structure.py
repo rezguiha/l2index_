@@ -49,7 +49,7 @@ class Direct_structure:
             # New current document size
             newDocSize = 0
             # for all token of this document
-            for tokenNb in range(self.doc_length[docId])
+            for tokenNb in range(self.doc_length[docId]):
                 # Get current tocken id
                 oldId = self.processed_documents[oldPos]
                 # Get new tocken
