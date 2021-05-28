@@ -8,10 +8,17 @@
 # =============================================================================
 source activate python3.7
 
-COLLPATH=/home/mrim/rezguiha/work/repro_chap7_res/wikIR_78/
-INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIR_full_documents_indexed
+COLLPATH=/home/mrim/rezguiha/work/repro_chap7_res/wikIRS_78/
+INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIRS_full_documents_indexed
 
 RESULT_PLOT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/test_speed_baseline/
+
+# COLLPATH=/home/mrim/rezguiha/work/repro_chap7_res/wikIR_78/
+# INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/enwikIR_full_documents_indexed
+
+# RESULT_PLOT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/test_speed_baseline/
+
+
 
 # COLLPATH=/home/mrim/rezguiha/work/repro_chap7_res/mini_wikIR_78/
 # INDEXPATH=/home/mrim/rezguiha/work/repro_chap7_res/mini_indexed_wikIR/indexed_collection
