@@ -5,7 +5,7 @@
 # Modified Date: March 21 2021
 # E-mail: hamdi.rezgui@grenoble-inp.org
 # Description: Code to evaluate baseline IR models without training , to do training
-# to get the TDV weights for a certain differentiable model and to evaluate baseline 
+# to get the TDV weights for a certain differentiable model and to evaluate baseline
 # IR models after taking into account the TDVs for a TREC Collection
 # =============================================================================
 
@@ -80,7 +80,7 @@ def main():
         qrel = pytrec_eval.parse_qrel(f_qrel)
     # ???? #HR
     id_titl = Collection.vocabulary['titl']
-    
+
     for i in range(len(Collection.all_indexed_queries)):
 
         if Collection.all_indexed_queries[i][0] == id_titl and len(Collection.all_indexed_queries[i]) > 1:
@@ -147,7 +147,7 @@ def main():
 
         elif args.IR_model == 'BM25':
             model = differentiable_models.diff_BM25(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
-        #HR added JM model 
+        #HR added JM model
         elif args.IR_model == 'JM':
             model = differentiable_models.diff_JM(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
 
@@ -171,6 +171,10 @@ def main():
             for i in range(len(query_batches)):
                 with tf.GradientTape() as tape:
                     # reshaping queries, pos_documents and neg_documents into a numpy ndarray #HR
+                    # Selectionne les requêtes dans le batch
+                    # query_batches est l'indice des requetes qui sont selectionnées pour ce batch
+                    # queries : une liste des requêtes dans le batch, chaque query est une liste d'idf de token
+                    # La pad c'est pour que toutes les queries soient de même taille
                     queries = tf.keras.preprocessing.sequence.pad_sequences(
                         [Collection.all_indexed_queries[j] for j in query_batches[i]], padding='post')
 
@@ -180,10 +184,17 @@ def main():
                     neg_documents = tf.keras.preprocessing.sequence.pad_sequences(
                         [Collection.indexed_docs[j] for j in negative_doc_batches[i]], padding='post')
                     # Creating sparse querie, pos_document and neg_documents indexes #HR
+                    # Crée des tenseurs creux à partir de la liste des requêtes sélectionnées
+                    # Est-ce que column est un embedding ou juste la liste des idf des termes ?
+                    # NON : c'est pas encore de l'embedding mais juste des odf de vocabulaire
+                    # j est l'indice de la query, raw est une query, donc column est simplement un idf de vocabulaire
                     q_sparse_index = [[column, j] for j, raw in enumerate(queries) for column in raw]
                     pos_d_sparse_index = [[column, j] for j, raw in enumerate(pos_documents) for column in raw]
                     neg_d_sparse_index = [[column, j] for j, raw in enumerate(neg_documents) for column in raw]
                     # computing relevance and dense document for the negative and positive documents in the batch #HR
+                    # Pourquoi cliper les requêtes ? Si c'est des IDF alors cela donne le motif binaire des termes
+                    # Ca doit faire 11100000 s'il y a 3 termes
+                    # ATTENTION : il faut que l'identifiant du vocabulaire soit différent de 0 , donc commence à 1 
                     pos_res, pos_d = model(np.clip(queries, 0, 1).astype(np.float32),
                                            queries,
                                            q_sparse_index,
@@ -231,8 +242,8 @@ def main():
             #             inverted_index,idf,docs_length,c_freq = utils.compute_info_retrieval(Collection,
             #                                                                                  weights,
             #                                                                                  weighted=False)
-            
-            
+
+
             # Computing new vocab_size and total number of elements after introducting the TDV #HR
             vocab_size, tot_nb_elem = utils.evaluate_inverted_index(inverted_index)
 
@@ -265,7 +276,7 @@ def main():
                                      epoch + 1)
             epoch += 1
         print("finish training for fold ", fold, " ", args.experiment_name, flush=True) #HR
-        
+
     print("-----------------Finished-------------------",flush=True) #HR
 
 if __name__ == "__main__":

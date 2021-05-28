@@ -4,7 +4,7 @@
 # Modified By  : Hamdi REZGUI
 # Modified Date: March 21 2021
 # E-mail: hamdi.rezgui@grenoble-inp.org
-# Description: Definition of the classes of differentiable IR models with their 
+# Description: Definition of the classes of differentiable IR models with their
 # network architecture
 # =============================================================================
 import numpy as np
@@ -31,16 +31,19 @@ class diff_simple_TF(Model):
 
     def make_BoW(self, seq, index, sparse_index):
         #computing a mask tensor where the value zero is considered as a padding value that should be masked out #HR
+        # Pour fabriquer un tenseur dense à partir de structure creuses comme la liste
+        # des termes des requêtes présentes
         mask = tf.dtypes.cast(self.embedding.compute_mask(index), dtype=tf.float32)
         # Multiplying the mask with a tensor of seq where the dimensions of size 1 are removed #HR THe result is a tensor
         # of only values
         seq = tf.math.multiply(mask, tf.squeeze(seq))
+        # Transform seq tensor into a single vector => Why ??
         seq = tf.reshape(seq, [-1])
 
         #Creating a sparse tensor and reordering its elements
         seq = tf.SparseTensor(indices=sparse_index, values=seq, dense_shape=[self.vocab_size, index.shape[0]])
         seq = tf.sparse.reorder(seq)
-        
+
         #??? HR
         linearized = tf.matmul(seq.indices, tf.constant([[index.shape[0]], [1]], dtype=tf.int64))
         y, idx = tf.unique(tf.squeeze(linearized))
@@ -53,7 +56,10 @@ class diff_simple_TF(Model):
         return tf.sparse.to_dense(seq)
 
     def call(self, q_index_float_32, q_index, q_sparse_index, d_index, d_sparse_index):
-        """This calculates the relevance between queries and documents""" #HR
+        """
+        This calculates the relevance between queries and documents #HR
+        Warning : seems to overload call operator #JPC
+        """
         q = self.make_BoW(q_index_float_32, q_index, q_sparse_index)
 
         d = tf.nn.dropout(self.embedding(d_index), rate=self.dropout_rate)
