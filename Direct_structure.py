@@ -10,25 +10,25 @@ import fasttext
 import resource
 #Defintion of Direct structure class
 class Direct_structure:
-    """This class defines the direct structure for classical IR system. We speak about documents in this class but it is not restricted to documents it can be queries too."""
+    """This class defines the direct structure for classical IR system. We speak about documents in this class but it is not restricted to documents it can be queries too. The directed structure is the inverse of posting lists"""
     def __init__(self):
         # List of processed documents
-        self.processed_documents=arr.array('I')
+        self.documents=arr.array('I')
         #Array of documents'length
-        self.doc_length=arr.array('I')
+        self.documents_length=arr.array('I')
 
     def add_document(self,processed_document):
         """
         Adding the array processed document to the list of processed documents,Adding document ID to the list of document IDs and adding the document's length to the array of document's length
         """
-        self.processed_documents.extend(processed_document)
+        self.documents.extend(processed_document)
 
-    def add_document_and_save(self,processed_document,file_path):
+    def add_document_and_save(self,document,file_path):
         """
         Saving the processed document just after it was processed
         """
-        with open(file_path+'/processed_documents','wb') as f:
-            processed_document.tofile(f)
+        with open(file_path+'/documents','wb') as f:
+            document.tofile(f)
 
     def filter_vocabulary(self,new_vocabulary):
         """
@@ -45,13 +45,13 @@ class Direct_structure:
         # The new size of all document content
         newContentSize = 0;
         # Filter all documents
-        for docId in range(len(self.doc_length)):
+        for docId in range(len(self.documents_length)):
             # New current document size
             newDocSize = 0
             # for all token of this document
-            for tokenNb in range(self.doc_length[docId]):
+            for tokenNb in range(self.documents_length[docId]):
                 # Get current tocken id
-                oldId = self.processed_documents[oldPos]
+                oldId = self.documents[oldPos]
                 # Get new tocken
                 newId = new_vocabulary[oldId]
                 # Test if this tocken is removed
@@ -60,39 +60,44 @@ class Direct_structure:
                     oldPos += 1
                 else:
                     # tocken not removed, so added to current document
-                    self.processed_documents[newPos] = newId
+                    self.documents[newPos] = newId
                     # next token and next position in the document
                     oldPos += 1
                     newPos += 1
                     newDocSize += 1
                     newContentSize += 1
             # Store the new document size
-            self.doc_length[docId] = newDocSize
+            self.documents_length[docId] = newDocSize
         # All document are filtered, remove the extra space if necessary
-        if newContentSize < len(self.processed_documents):
+        if newContentSize < len(self.documents):
             # We hope that python is smart enought for managing memory here
-            self.processed_documents = self.processed_documents[:newContentSize]
+            self.documents = self.documents[:newContentSize]
 
 
-    def saving_all_documents(self,file_path):
+    def saving_all_documents_and_documents_length(self,file_path):
         """
         Saving all documents that has been processed and added to the overall array
         """
-        with open(file_path+'/processed_documents','wb') as f:
-            self.processed_documents.tofile(f)
+        #Saving the documents length
+        with open(file_path+'/documents_length','wb') as f:
+            self.documents_length.tofile(f)
+        #Saving the direct documents
+        with open(file_path+'/direct_documents','wb') as f:
+            self.documents.tofile(f)
+            
     def load(self,file_path):
-        self.doc_length=arr.array('I')
-        self.processed_documents=[]
+        self.documents_length=arr.array('I')
+        self.documents=[]
         #Loading documents length
         with open(file_path+'/documents_length', 'rb') as f:
             #We use frombytes because it does not require to enter the number of elements you want to retrieve. fromfile does.
-            self.doc_length.frombytes(f.read())
+            self.documents_length.frombytes(f.read())
 
         #Loading processed documents
-        with open(file_path+'/processed_documents', 'rb') as f:
-            for document_length in self.doc_length:
+        with open(file_path+'/direct_documents', 'rb') as f:
+            for document_length in self.documents_length:
                 processed_document=arr.array('I')
                 processed_document.fromfile(f,document_length)
-                self.processed_documents.append(processed_document)
+                self.documents.append(processed_document)
     def get_number_of_document(self):
-        return len(self.doc_length)
+        return len(self.documents_length)

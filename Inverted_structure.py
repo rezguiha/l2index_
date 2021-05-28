@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import fasttext
 import resource
 import time
+import sys
 #Files
 from Direct_structure import Direct_structure
 #Defintion of Inverted structure class
@@ -21,7 +22,9 @@ class Inverted_structure:
         # A list of posting list for each tocken internal id as an array
         self.posting_lists=[]
         # Size of each document by doc internal Id
-        self.documents_length=arr.array('I')
+        #Warning: documents_length does not exist during the building process of inverted structure. It is in the directed
+        #structure. However, when loading inverted structure we load the documents length
+        self.documents_length=None
         self.stemmer = snowball.EnglishStemmer()
         self.stop_words = set(stopwords.words('english'))
         self.direct_structure = Direct_structure()
@@ -45,12 +48,12 @@ class Inverted_structure:
 
 
     def inverse_document(self,document_ID,document_text):
-        """Function that updates posting lists and vocabulary from a document text,builds a processed document to add to the direct structure and add the document ID to the list of document IDs and document length to the document length's array """
+        """Function that updates posting lists and vocabulary from a document text,builds a processed document to add to the direct structure and add the document ID to the list of document IDs and document length to the document length's array in directed structure """
         self.document_IDs.append(document_ID)
         internal_doc_ID=len(self.document_IDs)-1
         internal_token_ID=len(self.vocabulary)
         tmp_dict_freq=Counter()
-        processed_document=arr.array('I')
+        document=arr.array('I')
         
         #Preprocessing words, filling up the processed document and adding it to the direct structure, and fills the temporary dictionary to use later for updating the posting lists
         for elem in document_text.split(" "):
@@ -59,12 +62,12 @@ class Inverted_structure:
                 token=self.stemmer.stem(word)
                 #building the processed document for the document structure
                 token_id=self.getTokenId(token)
-                processed_document.append(token_id)
+                document.append(token_id)
                 tmp_dict_freq[token]+=1
         self.direct_structure.add_document(processed_document)
         #Computing the document length and adding it to the array of documents' length
         doc_length=sum(tmp_dict_freq.values())
-        self.direct_structure.doc_length.append(doc_length)
+        self.direct_structure.documents_length.append(doc_length)
         #Creating or updating the vocabulary and the posting lists
         for token,frequency in tmp_dict_freq.items():
                 #Updating length of posting list corresponding to the token
@@ -76,7 +79,9 @@ class Inverted_structure:
         del(tmp_dict_freq)
 
     def filter_vocabulary(self,minimum_occurence=5,proportion_of_frequent_words=0.2):
-        """Function that filters tokens from vocabulary and posting lists that have an occurence less than minimum_occurence or that are present in more than proportion_of_frequent_words of documents. These tokens will likely be not very useful for the retrieval objective"""
+        """Function that filters tokens from vocabulary and posting lists that have an occurence less than minimum_occurence or that are present in more than proportion_of_frequent_words of documents. These tokens will likely be not very useful for the retrieval objective
+        Warning: this method saves the directed structure and the updated documents length
+        """
         number_of_documents=self.get_number_of_documents()
         indices_of_posting_lists_to_delete=arr.array('I')
         vocabulary_table=arr.array('I')
@@ -141,6 +146,9 @@ class Inverted_structure:
 
         print("Memory usage after deleting posting lists", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         del(indices_of_posting_lists_to_delete)
+        
+        #Saving the directed structure with the documents length 
+        self.directed_structure.saving_all_documents_and_documents_length(file_path)
     def save(self,file_path):
         """A method that saves the posting file, the vocabulary and the document IDs"""
         #Writing the posting file
@@ -155,11 +163,7 @@ class Inverted_structure:
         with open(file_path+'/document_IDs', 'wb') as f:
             pickle.dump(self.document_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        #Saving the documents length
-        with open(file_path+'/documents_length','wb') as f:
-            self.direct_structure.doc_length.tofile(f)
-        #Saving directed structure
-        self.direct_structure.saving_all_documents(file_path)   
+  
     def load(self,file_path):
         """Function that loads the posting lists , vocabulary and document IDs"""
         #Initializing the objects to contain the posting lists,vocabulary and document IDs
@@ -188,10 +192,13 @@ class Inverted_structure:
                 self.posting_lists.append(posting_list)
 
         #Loading documents length
-        with open(file_path+'/documents_length', 'rb') as f:
-            #We use frombytes because it does not require to enter the number of elements you want to retrieve. fromfile does.
-            self.documents_length.frombytes(f.read())
-
+        try:
+            with open(file_path+'/documents_length', 'rb') as f:
+                #We use frombytes because it does not require to enter the number of elements you want to retrieve. fromfile does.
+                self.documents_length.frombytes(f.read())
+        except:
+            print("Documents length is not present in the directory. If it wasn't generated. Please do that before running this function",flush=True)
+            sys.exit(1)
     def get_vocabulary_size(self):
         return len(self.vocabulary)
 
