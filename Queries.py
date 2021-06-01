@@ -9,6 +9,8 @@ class Queries:
     def __init__(self,vocabulary):
         # External queries id, the position in this list is internal doc Id
         self.queries_IDs=[]
+        #Internal queries id
+        self.queries_internal_IDs=dict()
         # A list containing the processed queries which are a list of tokens
         self.queries=[]
         # Stemmer and stop words
@@ -24,6 +26,7 @@ class Queries:
         """Function that adds the external query ID to the list and processes the query and adds it to the processed queries list"""
         #Adding the exteral query ID
         self.queries_IDs.append(str(query_external_ID))
+        self.queries_internal_IDs[str(query_external_ID)]=len(self.queries_IDs)-1
         query=[]
         direct_query=[]
         #Processing the query
@@ -50,14 +53,14 @@ class Queries:
         return external_query_ID
     def get_internal_ID_of_query(self,external_query_ID):
         """Function that gets the internal_query_ID from the external_query_ID"""
-        internal_document_ID=None
+        internal_query_ID=None
         for i in range(len(self.queries_IDs)):
              if external_query_ID==self.queries_IDs[i]:
-                internal_document_ID=i
-        if internal_document_ID==None:
+                internal_query_ID=i
+        if internal_query_ID==None:
             raise ValueError
         else:
-            return internal_document_ID
+            return internal_query_ID
     def query(self):
         """Access all queries as a generator """
         for query in self.queries:

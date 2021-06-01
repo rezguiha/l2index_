@@ -53,7 +53,8 @@ class Direct_structure:
                 # Get current tocken id
                 oldId = self.documents[oldPos]
                 # Get new tocken
-                newId = new_vocabulary[oldId]
+                #The old token ID starts from 1 which corresponds to element oldId-1 in the new_vocabulary table
+                newId = new_vocabulary[oldId-1]
                 # Test if this tocken is removed
                 if newId == 0xffffffff:
                     # this tocken is removed, so we only move to next old tocken

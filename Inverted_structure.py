@@ -17,8 +17,12 @@ class Inverted_structure:
     def __init__(self):
         # Extern documet idf, the position in this list is internal doc Id
         self.document_IDs=[]
+        #Internal document idf 
+        self.document_internal_IDs=dict()
         # All tocken posting list description : [posting_long,tocken_id]
         self.vocabulary=dict()
+        """Warning: Vocabulary token ID starts from 1 instead of 0. This is needed in the training part of the neural model
+        because of the padding done to queries and documents with the 0 value"""
         # A list of posting list for each tocken internal id as an array
         self.posting_lists=[]
         # Size of each document by doc internal Id
@@ -36,7 +40,7 @@ class Inverted_structure:
         Warning: This method creates an empty posting list and adds it to the list of the posting lists too.
         """
         if token not in self.vocabulary:
-            internal_token_ID=len(self.vocabulary)
+            internal_token_ID=len(self.vocabulary)+1
             #updating the vocabulary with the new token.[length of posting list=0,position in the posting file=internal token ID]
             self.vocabulary[token]=[0,internal_token_ID]
             #creating an empty posting list to be filled later
@@ -50,8 +54,8 @@ class Inverted_structure:
     def inverse_document(self,document_ID,document_text):
         """Function that updates posting lists and vocabulary from a document text,builds a processed document to add to the direct structure and add the document ID to the list of document IDs and document length to the document length's array in directed structure """
         self.document_IDs.append(document_ID)
+        self.document_internal_IDs[document_ID]=len(self.document_IDs)-1
         internal_doc_ID=len(self.document_IDs)-1
-        internal_token_ID=len(self.vocabulary)
         tmp_dict_freq=Counter()
         document=arr.array('I')
         
@@ -64,7 +68,7 @@ class Inverted_structure:
                 token_id=self.getTokenId(token)
                 document.append(token_id)
                 tmp_dict_freq[token]+=1
-        self.direct_structure.add_document(processed_document)
+        self.direct_structure.add_document(document)
         #Computing the document length and adding it to the array of documents' length
         doc_length=sum(tmp_dict_freq.values())
         self.direct_structure.documents_length.append(doc_length)
@@ -72,13 +76,13 @@ class Inverted_structure:
         for token,frequency in tmp_dict_freq.items():
                 #Updating length of posting list corresponding to the token
                 self.vocabulary[token][0]+=1
-                #Getting the position of the posting list which is the internal token id
-                pos=self.vocabulary[token][1]
+                #Getting the position of the posting list which is the internal token id -1
+                pos=self.vocabulary[token][1]-1
                 #Extending the posting list to include the document ID and the frequency in the document
                 self.posting_lists[pos].extend([internal_doc_ID,frequency])
         del(tmp_dict_freq)
 
-    def filter_vocabulary(self,minimum_occurence=5,proportion_of_frequent_words=0.2):
+    def filter_vocabulary(self,file_path_to_save_direct_structure,minimum_occurence=5,proportion_of_frequent_words=0.2):
         """Function that filters tokens from vocabulary and posting lists that have an occurence less than minimum_occurence or that are present in more than proportion_of_frequent_words of documents. These tokens will likely be not very useful for the retrieval objective
         Warning: this method saves the directed structure and the updated documents length
         """
@@ -86,13 +90,14 @@ class Inverted_structure:
         indices_of_posting_lists_to_delete=arr.array('I')
         vocabulary_table=arr.array('I')
         tokens_to_delete=[]
-        index_token=0
-        new_index_token=0
+        index_token=1
+        new_index_token=1
         print("Memory usage start filter_inverted_structure", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,flush=True)
         #Iterating using a generator of tokens
         for token in self.token():
             length_of_posting_list=self.vocabulary[token][0]
-            posting_list=self.posting_lists[self.vocabulary[token][1]]
+            #Since internal token IDs start from 1. To get the corresponding posting list it is internal token ID -1
+            posting_list=self.posting_lists[self.vocabulary[token][1]-1]
 
             #Calculating the frequency of the token in the collection and we stop when we exceed the minimum number of occurence
             # If the result is less than the minimum occurence it means that we need to delete that element if not we keep it
@@ -106,7 +111,7 @@ class Inverted_structure:
                 #Storing token to delete from vocabulary from the vocabulary
                 tokens_to_delete.append(token)
                 #Storing indices of posting lists to delete. We can't delete them one by one because the indices will change when we do that
-                indices_of_posting_lists_to_delete.append(index_token)
+                indices_of_posting_lists_to_delete.append(index_token-1)
                 vocabulary_table.append(0xffffffff)
             else:
                 vocabulary_table.append(new_index_token)
@@ -123,8 +128,7 @@ class Inverted_structure:
         for token in tokens_to_delete:
             del self.vocabulary[token]
         #Iterating using a generator for yielding token from vocabulary
-        internal_token_ID=0
-        previous_internal_token_ID=arr.array('I')
+        internal_token_ID=1
         for token in self.token():
             self.vocabulary[token][1]=internal_token_ID
             internal_token_ID+=1
@@ -148,7 +152,7 @@ class Inverted_structure:
         del(indices_of_posting_lists_to_delete)
         
         #Saving the directed structure with the documents length 
-        self.directed_structure.saving_all_documents_and_documents_length(file_path)
+        self.direct_structure.saving_all_documents_and_documents_length(file_path_to_save_direct_structure)
     def save(self,file_path):
         """A method that saves the posting file, the vocabulary and the document IDs"""
         #Writing the posting file
@@ -163,7 +167,9 @@ class Inverted_structure:
         with open(file_path+'/document_IDs', 'wb') as f:
             pickle.dump(self.document_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-  
+        with open(file_path+'/document_internal_IDs', 'wb') as f:
+            pickle.dump(self.document_internal_IDs, f, protocol=pickle.HIGHEST_PROTOCOL)
+
     def load(self,file_path):
         """Function that loads the posting lists , vocabulary and document IDs"""
         #Initializing the objects to contain the posting lists,vocabulary and document IDs
@@ -171,6 +177,7 @@ class Inverted_structure:
         self.document_IDs=[]
         self.posting_lists=[]
         self.documents_length=arr.array('I')
+        self.document_internal_IDs=dict()
         #Loading the vocabulary
         with open(file_path+'/vocabulary', 'rb') as f:
             self.vocabulary=pickle.load(f)
@@ -178,7 +185,8 @@ class Inverted_structure:
         #Loading the document IDS
         with open(file_path+'/document_IDs', 'rb') as f:
             self.document_IDs=pickle.load(f)
-
+        with open(file_path+'/document_internal_IDs', 'rb') as f:
+            self.document_internal_IDs=pickle.load(f)
         #Loading the posting lists
         with open(file_path+'/posting_file', 'rb') as f:
             #Going through the vocabulary in order of position to get the length of each posting lists and get the
@@ -199,6 +207,7 @@ class Inverted_structure:
         except:
             print("Documents length is not present in the directory. If it wasn't generated. Please do that before running this function",flush=True)
             sys.exit(1)
+    
     def get_vocabulary_size(self):
         return len(self.vocabulary)
 
@@ -227,7 +236,7 @@ class Inverted_structure:
             print( token +" is not present in the vocabulary . No posting list found")
         except:
             print("Unkown error")
-        posting_list=self.posting_lists[internal_token_ID]
+        posting_list=self.posting_lists[internal_token_ID-1]
 
         return [(posting_list[2*i],posting_list[2*i+1]) for i in range(length_of_posting_list)]
 
@@ -242,7 +251,7 @@ class Inverted_structure:
             print( token +" is not present in the vocabulary . No posting list found")
         except:
             print("Unkown error")
-        posting_list=self.posting_lists[internal_token_ID]
+        posting_list=self.posting_lists[internal_token_ID-1]
         i = 0;
         while (i < length_of_posting_list) :
             yield (posting_list[2*i],posting_list[2*i+1])
@@ -286,7 +295,7 @@ class Inverted_structure:
         for token in self.vocabulary:
             internal_token_ID=self.vocabulary[token][1]
             length_posting_list=self.vocabulary[token][0]
-            posting_list=self.posting_lists[internal_token_ID]
+            posting_list=self.posting_lists[internal_token_ID-1]
             self.c_freq[token]=0
             for i in range(length_posting_list):
                 self.c_freq[token]+=posting_list[2*i+1]/coll_length
@@ -298,7 +307,16 @@ class Inverted_structure:
             for token in self.vocabulary:
                 array_embeddings=arr.array('f',model[token])
                 array_embeddings.tofile(f)
-
+    def compute_fasttext_embeddings(self,model_path):
+        """Function that computes the fasttext embeddings of every token in the vocabulary : vectos of 300 dimension"""
+        model = fasttext.load_model(model_path)
+        vocab_size = self.get_vocabulary_size()
+        self.embedding_matrix = np.zeros((vocab_size, 300),dtype=np.float32)
+        index=0
+        for token in self.vocabulary:
+            array_embeddings=arr.array('f',model[token])
+            self.embedding_matrix[index] = array_embeddings
+            index+=1
     def load_fasttext_embeddings(self,file_path):
         """Function that loads fasttext embeddings vectors of tokens in the vocabulary."""
         vocab_size = self.get_vocabulary_size()
