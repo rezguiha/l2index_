@@ -35,21 +35,29 @@ class diff_simple_TF(Model):
         # des termes des requêtes présentes
         mask = tf.dtypes.cast(self.embedding.compute_mask(index), dtype=tf.float32)
         # Multiplying the mask with a tensor of seq where the dimensions of size 1 are removed #HR THe result is a tensor
-        # of only values
+        # of only values. THe multiplication is element wise
         seq = tf.math.multiply(mask, tf.squeeze(seq))
-        # Transform seq tensor into a single vector => Why ??
+        # Transform seq tensor into a single vector (flattening the tensor so it is accepted as values in the next line for the sparse tensor. The multiply in the previous line returns a tensor of shape (dimension of mask=dimension of tf.squeeze(seq),) 
         seq = tf.reshape(seq, [-1])
 
         #Creating a sparse tensor and reordering its elements
         seq = tf.SparseTensor(indices=sparse_index, values=seq, dense_shape=[self.vocab_size, index.shape[0]])
         seq = tf.sparse.reorder(seq)
 
-        #??? HR
+        """This part aims to have a sparse tensor composed of the frequency according to each token in the document or in the
+        query. That is why in the implimentation seq is np.clip(queries/documents,0,1) to have 0 if the word is absent
+        and 1 if it is there"""
+        #This is done to get the index of each element in the sparse tensor if it was dense and flattened
         linearized = tf.matmul(seq.indices, tf.constant([[index.shape[0]], [1]], dtype=tf.int64))
+        #tf.unique returns y which are the unique elements of the vector and idx which is a vector of the same size as the input
+        #vector but filled with the list of indices of the unique values in the input vector
         y, idx = tf.unique(tf.squeeze(linearized))
+        #Returns a tensor composed of elements that are the sum of values that have the same indice in idx (giving us the frequency of each word
         values = tf.math.segment_sum(seq.values, idx)
         y = tf.expand_dims(y, 1)
+        #Constructing the new indices
         indices = tf.concat([y // index.shape[0], y % index.shape[0]], axis=1)
+        #New sparse tensor with values equal to frequency of token
         seq = tf.SparseTensor(indices=indices, values=values, dense_shape=[self.vocab_size, index.shape[0]])
         seq = tf.sparse.reorder(seq)
 

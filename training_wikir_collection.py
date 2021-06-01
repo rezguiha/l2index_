@@ -140,27 +140,24 @@ def main():
     while epoch < args.nb_epoch and prop_elem_index > 0.2:
 
         begin = time.time()
-        #Generating batches from WikIR Collection for training #HR
-        query_batches, positive_doc_batches, negative_doc_batches = Collection.generate_training_batches(batch_size)
-
         rank_loss = 0.0
         reg_loss = 0.0
         all_non_zero = 0.0
 
         begin = time.time()
-
-        for i in range(len(query_batches)):
+        #Iterating using the generator of training batches
+        for query_batch, positive_doc_batch, negative_doc_batch in Collection.generate_training_batches(batch_size):
             with tf.GradientTape() as tape:
                 # reshaping queries, pos_documents and neg_documents into a numpy  ndarray #HR
                 # i est le numéro les batchs qui on été prévu
                 # j est le numéro interne du document, il sert à acceder à la version "direct" de chaque document
                 # Tous les documents sont sous la forme d'une liste d'identifiant de vocabulaire
                 queries = tf.keras.preprocessing.sequence.pad_sequences(
-                    [Collection.indexed_training_queries[j] for j in query_batches[i]], padding='post')
+                    [Collection.training_queries[internal_query_ID] for internal_query_ID in query_batch], padding='post')
                 pos_documents = tf.keras.preprocessing.sequence.pad_sequences(
-                    [Collection.indexed_docs[j] for j in positive_doc_batches[i]], padding='post')
+                    [Collection.direct_structure.documents[internal_doc_ID] for internal_doc_ID in positive_doc_batch], padding='post')
                 neg_documents = tf.keras.preprocessing.sequence.pad_sequences(
-                    [Collection.indexed_docs[j] for j in negative_doc_batches[i]], padding='post')
+                    [Collection.direct_structure.documents[internal_doc_ID] for internal_doc_ID in negative_doc_batch], padding='post')
                 # Creating sparse querie, pos_document and neg_documents indexes #HR
                 q_sparse_index = [[column, j] for j, raw in enumerate(queries) for column in raw]
                 pos_d_sparse_index = [[column, j] for j, raw in enumerate(pos_documents) for column in raw]

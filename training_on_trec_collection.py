@@ -37,7 +37,7 @@ import pytrec_eval
 
 import differentiable_models
 import baseline_models_and_tdv_implementation
-from Trec_Collection import TrecCollection
+from Trec_Collection_opt import TrecCollection
 import utils
 ###############Training on Trec collections############### #HR
 
@@ -52,6 +52,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--coll_path', nargs="?", type=str)
     parser.add_argument('-i', '--indexed_path', nargs="?", type=str)
+    parser.add_argument('-f', '--fasttext_path', nargs="?", type=str)
     parser.add_argument('-p', '--plot_path', nargs="?", type=str)
     parser.add_argument('-r', '--results_path', nargs="?", type=str)
     parser.add_argument('-w', '--weights_path', nargs="?", type=str)
@@ -70,27 +71,16 @@ def main():
 
     # Loading indexed collection #HR
     Collection = TrecCollection()
-    with open(args.indexed_path, 'rb') as f:
-        Collection = pickle.load(f)
+    Collection.load_inverted_structure(args.indexed_path)
+    Collection.inverted_structure.compute_idf()
+    Collection.inverted_structure.compute_collection_frequencies()
+    Collection.inverted_structure.compute_fasttext_embeddings(args.fasttext_path)
+    Collection.load_direct_structure(args.indexed_path)
 
-    Collection.doc_index[-1] = "-1"
-    Collection.doc_index["-1"] = -1
     # Loading relevance judgements from collection #HR
     with open(args.coll_path + 'qrels', 'r') as f_qrel:
         qrel = pytrec_eval.parse_qrel(f_qrel)
-    # ???? #HR
-    id_titl = Collection.vocabulary['titl']
 
-    for i in range(len(Collection.all_indexed_queries)):
-
-        if Collection.all_indexed_queries[i][0] == id_titl and len(Collection.all_indexed_queries[i]) > 1:
-            print("found it at ", i," ", Collection.all_indexed_queries[i][0])
-            del Collection.all_indexed_queries[i][0]
-
-    for i in range(len(Collection.indexed_queries)):
-        for j in range(len(Collection.indexed_queries[i])):
-            if Collection.indexed_queries[i][j][0] == id_titl and len(Collection.indexed_queries[i][j]) > 1:
-                del Collection.indexed_queries[i][j][0]
 
     print('---------------------start-------------------',flush=True)
     # Getting collection vocabulary size and total number of elements in collection #HR
@@ -116,19 +106,7 @@ def main():
 
         if not os.path.exists(args.plot_path + '/fold' + str(fold) + '/'):
             os.makedirs(args.plot_path + '/fold' + str(fold) + '/')
-        # Computing metrics for baseline models for a certain fold and updating plot_values dictionnary #HR
-                #HR modified the eval_baseline_index to a function eval_baseline_index_trec
-        # The previous version did not work because of different call parameters
-        utils.eval_baseline_index_trec(args.coll_path,
-                            Collection,
-                            fold,
-                            qrel,
-                            plot_values,
-                            args.results_path,
-                            args.experiment_name,
-                            0)
-        # Saving plot_values dict of a particular fold as a pickle #HR
-        pickle.dump(plot_values, open(args.plot_path + '/fold' + str(fold) + '/' + args.experiment_name, 'wb'))
+
         # Initialization of batch size, the loss function,te optimizer and the model to train #HR
         batch_gen_time = []
         batch_size = 32
@@ -136,20 +114,17 @@ def main():
         loss_function = tf.keras.losses.Hinge()
         optimizer = tf.keras.optimizers.Adam(args.lr)
 
-        if args.IR_model == 'tf':
-            model = differentiable_models.diff_simple_TF(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
-
-        elif args.IR_model == 'tf_idf':
-            model = differentiable_models.diff_TF_IDF(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
+        if args.IR_model == 'tf_idf':
+            model = differentiable_models.diff_TF_IDF(Collection.inverted_structure.embedding_matrix, dropout_rate=args.dropout_rate)
 
         elif args.IR_model == 'DIR':
-            model = differentiable_models.diff_DIR(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
+            model = differentiable_models.diff_DIR(Collection.inverted_structure.embedding_matrix, dropout_rate=args.dropout_rate)
 
         elif args.IR_model == 'BM25':
-            model = differentiable_models.diff_BM25(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
+            model = differentiable_models.diff_BM25(Collection.inverted_structure.embedding_matrix, dropout_rate=args.dropout_rate)
         #HR added JM model
         elif args.IR_model == 'JM':
-            model = differentiable_models.diff_JM(Collection.embedding_matrix, dropout_rate=args.dropout_rate)
+            model = differentiable_models.diff_JM(Collection.inverted_structure.embedding_matrix, dropout_rate=args.dropout_rate)
 
         # Training the model #HR
         print("Start training for fold ", fold, " ", args.experiment_name, flush=True)
@@ -158,17 +133,14 @@ def main():
         while epoch < args.nb_epoch and prop_elem_index > 0.05:
 
             begin = time.time()
-            # generation of batches from the trec collection for training #HR
-            query_batches, positive_doc_batches, negative_doc_batches = Collection.generate_training_batches(
-                fold, batch_size)
 
             rank_loss = 0.0
             reg_loss = 0.0
             all_non_zero = 0.0
 
             begin = time.time()
-
-            for i in range(len(query_batches)):
+            #Iterating using a generator that yields batches for query, positive documents and negative documents
+            for query_batch, positive_doc_batch, negative_doc_batch in Collection.generate_training_batches(fold,batch_size):
                 with tf.GradientTape() as tape:
                     # reshaping queries, pos_documents and neg_documents into a numpy ndarray #HR
                     # Selectionne les requêtes dans le batch
@@ -176,13 +148,13 @@ def main():
                     # queries : une liste des requêtes dans le batch, chaque query est une liste d'idf de token
                     # La pad c'est pour que toutes les queries soient de même taille
                     queries = tf.keras.preprocessing.sequence.pad_sequences(
-                        [Collection.all_indexed_queries[j] for j in query_batches[i]], padding='post')
+                        [Collection.all_direct_queries[internal_query_ID] for internal_query_ID in query_batch], padding='post')
 
                     pos_documents = tf.keras.preprocessing.sequence.pad_sequences(
-                        [Collection.indexed_docs[j] for j in positive_doc_batches[i]], padding='post')
+                        [Collection.direct_structure.documents[internal_doc_ID] for internal_doc_ID in positive_doc_batch], padding='post')
 
                     neg_documents = tf.keras.preprocessing.sequence.pad_sequences(
-                        [Collection.indexed_docs[j] for j in negative_doc_batches[i]], padding='post')
+                        [Collection.direct_structure.documents[internal_doc_ID] for internal_doc_ID in negative_doc_batch], padding='post')
                     # Creating sparse querie, pos_document and neg_documents indexes #HR
                     # Crée des tenseurs creux à partir de la liste des requêtes sélectionnées
                     # Est-ce que column est un embedding ou juste la liste des idf des termes ?

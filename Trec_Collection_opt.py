@@ -25,6 +25,7 @@ from nltk.corpus import stopwords
 import std_tokenizer
 import utils
 from Inverted_structure import Inverted_structure
+from Direct_structure import Direct_structure
 from  Queries import Queries
 
 ####Useful methods for trec collection and trec collection class definition#### HR
@@ -197,47 +198,67 @@ class TrecCollection:
                                                   na_filter=False))
 
         
-    def build_inverted_index_and_vocabulary(self, file_path=None, save=True,minimum_occurence=5,proportion_of_frequent_words=0.2):
+    def build_inverted_index_and_vocabulary(self, file_path,minimum_occurence=5,proportion_of_frequent_words=0.2):
         """Function that builds the inverted index and  the vocabulary"""
         inverted_structure = Inverted_structure()
         start=time.time()
         # Iterating over the documents
         for document_ID, document_text in self.documents.iterrows():
-            inverted_structure.inverse_document(document_ID, document_text[0])
+            inverted_structure.inverse_document(str(document_ID), document_text[0])
         end=time.time()
         number_of_documents=inverted_structure.get_number_of_documents()
         print("Average time to inverse documents TREC",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
-        #Filtering vocabulary and posting lists
+        #Filtering vocabulary ,posting lists,direct structure ,update documents' length and save direct structure
+        if os.path.exists(file_path):
+            start=time.time()
+            inverted_structure.filter_vocabulary(file_path,minimum_occurence,proportion_of_frequent_words)  
+            end=time.time()
+            print("Average time to filter vocabulary,posting lists and update document lengths Trec and save direct structure",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
+        else:
+            raise IOError('Path does not exist: %s' % file_path)
+        
+        #Saving inverted structure    
+
         start=time.time()
-        inverted_structure.filter_vocabulary(minimum_occurence,proportion_of_frequent_words)  
+        inverted_structure.save(file_path)
         end=time.time()
-        print("Average time to filter vocabulary,posting lists and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
-        #Saving      
-        if save and file_path != None:
-            if os.path.exists(file_path):
-                start=time.time()
-                inverted_structure.save(file_path)
-                end=time.time()
-                print("Saving time TREC",round(end-start), " s",flush=True)
-            else:
-                raise IOError('Path does not exist: %s' % file_path)
+        print("Saving time inverted structure TREC",round(end-start), " s",flush=True)
         return inverted_structure
     
-    
-    def process_queries(self, file_path=None, save=False,vocabulary):
+    def load_inverted_structure(self,file_path):
+        self.inverted_structure=Inverted_structure()
+        self.inverted_structure.load(file_path)
+    def load_directed_structure(self,file_path):
+        self.direct_structure=Directed_structure()
+        self.direct_structure.load(file_path)
+    def process_queries(self,vocabulary, file_path=None, save=False):
         # Processing training queries
-        folds_processed_queries=[]
+        self.folds_processed_queries=[]
         for i in range(self.k):
             processed_queries = Queries(vocabulary)
             for query_ID, query_text in self.folds_queries[i].iterrows():
                 processed_queries.process_query_and_get_ID(query_ID, query_text[0])
-            folds_processed_queries.append(processed_queries)
+            self.folds_processed_queries.append(processed_queries)
             if save and file_path != None:
                 if os.path.exists(file_path):
-                    processed_queries.save(file_path, "fold"+str(i))
+                    processed_queries.save(file_path+"fold"+str(i))
                 else:
                     raise IOError('Path does not exist: %s' % file_path)
-        return folds_processed_queries
+        return self.folds_processed_queries
+    def get_all_direct_queries_and_internal_query_IDs(self)
+        """Function that collects all direct queries , the access table for general internal query ID in all the folds
+        """
+        self.all_direct_queries=[]
+        #Dictionary for each external query ID is associated an internal token ID defined for all the queries in the database
+        self.all_internal_query_IDs=dict()
+        index=0
+        for queries_struc in self.folds_processed_queries:
+            #Collecting all direct queries of the K folds
+            self.all_direct_queries.append(queries_struct.direct_queries)
+            #Collecting all external query IDs and their updated internal query ID for all queries in the database
+            for query_external_ID in queries_struct.queries_internal_IDs:
+                self.all_internal_query_IDs[query_external_ID]=index
+                index+=1
     #To modify to fit the new inverted structure
     def generate_training_batches(self, fold, batch_size=64):
         """Function that builds batches of queries and their corresponding negative and positive documents
@@ -247,22 +268,20 @@ class TrecCollection:
         negative_pairs = {}
         for i in range(self.k):
             if i != fold:
-                positive_pairs += self.folds_training_indexed_qrels[i]['pos']
-                negative_pairs.update(self.folds_training_indexed_qrels[i]['neg'])
+                positive_pairs += self.folds_training_qrels[i]['pos']
+                negative_pairs.update(self.folds_training_qrels[i]['neg'])
 
         random.shuffle(positive_pairs)
-        nb_docs = len(self.indexed_docs)
+        nb_docs = len(self.direct_structure.documents)
         nb_train_pairs = len(positive_pairs)
-        query_batches = []
-        positive_doc_batches = []
-        negative_doc_batches = []
+        query_batches = arr.array('I')
+        positive_doc_batches = arr.array('I')
+        negative_doc_batches = arr.array('I')
         pos = 0
         while (pos + batch_size < nb_train_pairs):
-            query_batches.append([q for q, d in positive_pairs[pos:pos + batch_size]])
-            positive_doc_batches.append([d for q, d in positive_pairs[pos:pos + batch_size]])
-            neg_docs = []
-            for elem in query_batches[-1]:
-                neg_docs.append(random.choice(negative_pairs[self.all_queries_index[elem]]))
-            negative_doc_batches.append(neg_docs)
+            for q,d in positive_pairs[pos:pos+batch_size]:
+                query_batches.append(self.all_internal_query_IDs[q])
+                positive_doc_batches.append(self.inverted_structure.document_internal_IDs[d])
+                neg_docs.append(self.inverted_structure.document_internal_IDs(random.choice(negative_pairs[q])))
+            yield query_batch, positive_doc_batch, negative_doc_batch
             pos += batch_size
-        return query_batches, positive_doc_batches, negative_doc_batches

@@ -16,11 +16,11 @@ FASTTEXT_PATH=/home/mrim/rezguiha/work/repro_chap7_res/fastText/cc.en.300.bin
 for COLL in AP88-89 LA FT91-94
 do
     COLLPATH=TREC/${COLL}/
-    INDEXPATH=TREC/${COLL}/indexed_collection
+    INDEXPATH=TREC/${COLL}/
 
     for MODEL in tf_idf DIR BM25 JM
     do
-        python training_on_trec_collection.py -c ${COLLPATH} -i $INDEXPATH -p ${COLLPATH}plots -r ${COLLPATH}results -w ${COLLPATH}weights -e $NB_EPOC -l ${L1_WEIGHT} -n ${COLL}_${MODEL}_${L1_WEIGHT}_${DROPOUT} --lr $LR -d ${DROPOUT}  --IR_model ${MODEL} > ${COLLPATH}stdout/${MODEL}_${L1_WEIGHT}_${DROPOUT} 2> ${COLLPATH}stderr/${MODEL}_${L1_WEIGHT}_${DROPOUT} &
+        python training_on_trec_collection.py -c ${COLLPATH} -i $INDEXPATH -f ${FASTTEXT_PATH}-p ${COLLPATH}plots -r ${COLLPATH}results -w ${COLLPATH}weights -e $NB_EPOC -l ${L1_WEIGHT} -n ${COLL}_${MODEL}_${L1_WEIGHT}_${DROPOUT} --lr $LR -d ${DROPOUT}  --IR_model ${MODEL} > ${COLLPATH}stdout/${MODEL}_${L1_WEIGHT}_${DROPOUT} 2> ${COLLPATH}stderr/${MODEL}_${L1_WEIGHT}_${DROPOUT} &
     done
 done
 mail -s "training_on_trec_collection" hamdi.rezgui1993@gmail.com <<< "finished"

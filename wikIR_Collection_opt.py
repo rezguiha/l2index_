@@ -37,65 +37,102 @@ class Collection:
         self.validation_relevance = utils.read_qrels(collection_path + '/validation/qrels')
         self.test_relevance = utils.read_qrels(collection_path + '/test/qrels')
 
-    def build_inverted_index_and_vocabulary(self, file_path=None, save=True,minimum_occurence=5,proportion_of_frequent_words=0.2):
+    def build_inverted_index_and_vocabulary(self, file_path,minimum_occurence=5,proportion_of_frequent_words=0.2):
         """Function that builds the inverted index ,the vocabulary ,posting lists,documents_length and direct structure and filters them"""
         inverted_structure = Inverted_structure()
         start=time.time()
         # Iterating over the documents and building the inverted and the direct structure
         for document_ID, document_text in self.documents.iterrows():
-            inverted_structure.inverse_document(document_ID, document_text[0])
+            inverted_structure.inverse_document(str(document_ID), document_text[0])
         end=time.time()
         number_of_documents=inverted_structure.get_number_of_documents()
         print("Total time to inverse documents wikIR",round(end-start), " s",flush=True)
         print("Average time to inverse documents wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Filtering vocabulary , posting lists, the direct structure and document lengths
-        start=time.time()
-        inverted_structure.filter_vocabulary(minimum_occurence,proportion_of_frequent_words)  
-        end=time.time()
+        if os.path.exists(file_path):
+            start=time.time()
+            inverted_structure.filter_vocabulary(file_path,minimum_occurence,proportion_of_frequent_words)  
+            end=time.time()
+        else:
+            raise IOError('Path does not exist: %s' % file_path)
         print("Total time to filter vocabulary,posting lists,direct_structure and update document lengths wikIR",round(end-start), " s",flush=True)
         print("Average time to filter vocabulary,posting lists,direct_structure and update document lengths wikIR",round(((end-start)/number_of_documents)*1000), " ms",flush=True)
         #Saving      
-        if save and file_path != None:
-            if os.path.exists(file_path):
-                start=time.time()
-                inverted_structure.save(file_path)
-                end=time.time()
-                print("Saving time wikIR",round(end-start), " s",flush=True)
-            else:
-                raise IOError('Path does not exist: %s' % file_path)
+        start=time.time()
+        inverted_structure.save(file_path)
+        end=time.time()
+        print("Saving time inverted structure wikIR",round(end-start), " s",flush=True)
+
         return inverted_structure
     def load_inverted_structure(self,file_path):
-        self.inverted_structure=Inverted_structure
+        self.inverted_structure=Inverted_structure()
         self.inverted_structure.load(file_path)
     def load_directed_structure(self,file_path):
         self.direct_structure=Directed_structure()
         self.direct_structure.load(file_path)
-    def process_queries(self, file_path=None, save=False,vocabulary):
+    def process_queries(self,vocabulary, file_path=None, save=False):
         # Processing training queries
-        training_queries = Queries(vocabulary)
+        self.training_queries = Queries(vocabulary)
         for query_ID, query_text in self.training_queries.iterrows():
-            training_queries.process_query_and_get_ID(query_ID, query_text[0])
+            self.training_queries.process_query_and_get_ID(query_ID, query_text[0])
         if save and file_path != None:
             if os.path.exists(file_path):
-                training_queries.save(file_path, "training")
+                self.training_queries.save(file_path, "training")
             else:
                 raise IOError('Path does not exist: %s' % file_path)
         # Processing validation queries
-        validation_queries = Queries(vocabulary)
+        self.validation_queries = Queries(vocabulary)
         for query_ID, query_text in self.validation_queries.iterrows():
-            validation_queries.process_query_and_get_ID(query_ID, query_text[0])
+            self.validation_queries.process_query_and_get_ID(query_ID, query_text[0])
         if save and file_path != None:
             if os.path.exists(file_path):
-                validation_queries.save(file_path, "validation")
+                self.validation_queries.save(file_path, "validation")
             else:
                 raise IOError('Path does not exist: %s' % file_path)
         # Processing test queries
-        test_queries = Queries(vocabulary)
+        self.test_queries = Queries(vocabulary)
         for query_ID, query_text in self.test_queries.iterrows():
-            test_queries.process_query_and_get_ID(query_ID, query_text[0])
+            self.test_queries.process_query_and_get_ID(query_ID, query_text[0])
         if save and file_path != None:
             if os.path.exists(file_path):
-                test_queries.save(file_path, "test")
+                self.test_queries.save(file_path, "test")
             else:
                 raise IOError('Path does not exist: %s' % file_path)
-        return training_queries, validation_queries, test_queries
+        return self.training_queries, self.validation_queries, self.test_queries
+    
+    
+    def generate_training_batches(self, batch_size=64):
+        "Generator Function that generates training batches"
+        random.shuffle(self.training_relevance)
+        nb_docs = len(self.direct_structure.documents)
+        nb_train_pairs = len(self.training_relevance)
+        query_batches = arr.array('I')
+        positive_doc_batches = arr.array('I')
+        negative_doc_batches = arr.array('I')
+        pos = 0
+        while (pos + batch_size < nb_train_pairs):
+            for q,d in self.training_relevance[pos:pos + batch_size]:
+                query_batch.append(self.training_queries.queries_internal_IDs[str(q)])
+                positive_doc_batch.append(self.inverted_structure.document_internal_IDs[str(d)])
+                negative_doc_batch.append(random.randint(0, nb_docs - 1))
+            yield query_batch, positive_doc_batch, negative_doc_batch
+            pos += batch_size
+            
+
+    def generate_test_batches(self, batch_size=64):
+        """Generator Function that generates test batch"""
+        random.shuffle(self.test_relevance)
+        nb_docs = len(self.direct_structure.documents)
+        nb_train_pairs = len(self.training_relevance)
+        query_batches = arr.array('I')
+        positive_doc_batches = arr.array('I')
+        negative_doc_batches = arr.array('I')
+        pos = 0
+        while (pos + batch_size < nb_train_pairs):
+            for q,d in self.test_relevance[pos:pos + batch_size]:
+                query_batch.append(self.training_queries.queries_internal_IDs[str(q)])
+                positive_doc_batch.append(self.inverted_structure.document_internal_IDs[str(d)])
+                negative_doc_batch.append(random.randint(0, nb_docs - 1))
+            yield query_batch, positive_doc_batch, negative_doc_batch
+            pos += batch_size
+            
