@@ -21,7 +21,7 @@ def main():
     Collection_wikir.load_documents(args.coll_path)
     
     print('------Creating Posting file, Vocabulary and Document length and filtering tokens ', flush=True)
-    Collection_wikir.build_inverted_index_and_vocabulary(args.indexed_path,save=True,minimum_occurence=5,proportion_of_frequent_words=0.2)
+    Collection_wikir.build_inverted_index_and_vocabulary(args.indexed_path,minimum_occurence=5,proportion_of_frequent_words=0.2)
 
 #     print('Compute fasstetext embeddings', flush=True)
 #     Collection_wikir.compute_fasttext_embedding(args.fasttext_path)

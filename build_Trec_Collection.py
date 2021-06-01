@@ -65,9 +65,9 @@ def main():
 
     print("=> Build and save inverted structure ",flush=True)
     tic = time.time()
-    Collection.build_inverted_index_and_vocabulary(args.index_path,save=True)
+    Collection.build_inverted_index_and_vocabulary(args.index_path)
     toc = time.time()
-    print("<= Time to build and save the inverted structure",round(toc-tic),"s")
+    print("<= Time to build and save the inverted and direct structure",round(toc-tic),"s")
 
     totalTime = time.time()-startTime
     print("Total time: ",round(totalTime),"s")
