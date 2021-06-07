@@ -18,16 +18,19 @@ class Example(Model):
         print("Shape of documents batch=",documents_batch.shape,flush=True)      
         #Multiply the batch of dense documents of size (batch_size,vocab_size) by embedding matrix of size (vocab_size,embedding_size)
         #We need the tf.cast so we have the same type of tensor in order to be able to do the multiplication
+        #We get for each document the weighted sum of embedding dimensions  by the frequency of each token in the document
+        #The shape should be (batch size,embedding dimension)
         documents_embeddings_weighted_by_frequency=tf.matmul(tf.cast(documents_batch, tf.float32),self.embedding_matrix)
-#         documents_embeddings_weighted_by_frequency=tf.sparse.sparse_dense_matmul(documents_batch,self.embedding_matrix)        
-
+#         documents_embeddings_weighted_by_frequency=tf.sparse.sparse_dense_matmul(documents_batch,self.embedding_matrix)       
         print("Shape of documents_embeddings_weighted_by_frequency batch=",documents_embeddings_weighted_by_frequency.shape,flush=True)
-        
+        #We get for each document the weighted sum of embedding dimensions  by the frequency of each token in the document
+        #The shape should be (batch size
         documents_class=self.dense_layer(documents_embeddings_weighted_by_frequency)
         print("Shape of documents batch class after dense layer,document_class=",documents_class.shape,flush=True)
 
         return documents_class
 def load_vocabulary(file_path):
+    #Loading the vocabulary of the collection Wikir which was saved using the Pickle module
     vocabulary=dict()
     with open(file_path + '/vocabulary', 'rb') as f:
         vocabulary = pickle.load(f)
@@ -36,6 +39,7 @@ def reduce_vocabulary_and_compute_fasttext_embeddings(file_path,fasttext_model_p
     #reducing the size of the vocabulary
     vocabulary=load_vocabulary(file_path)
     number_of_elements_to_keep=round(proportion_of_vocabulary_to_keep*len(vocabulary))
+    #Each token for the vocabulary has a value composed of [length_of_posting list,internal_token ID]. When reducing we keep only the k first elements of the vocabulary
     reduced_vocabulary={token:value[1] for token,value in vocabulary.items() if value[1]<number_of_elements_to_keep}
     del(vocabulary)
     #Computing the embedding matrix
@@ -50,8 +54,10 @@ def reduce_vocabulary_and_compute_fasttext_embeddings(file_path,fasttext_model_p
 
     return embedding_matrix,vocab_size
 def generate_training_batches(batch_size,number_of_documents_to_generate,vocab_size):
-    # Generating documents and labels
+    """This is a generator method to generate a dense tensor containing a batch of Bag of words representation of documents and coressponding labels. We try to simulate the fact that we get two arrays as input. One containing unique token ids and the second containing the corresponding frequency in the document."""
     pos=0
+    # We suppose that we have 350 out of 500 tokens appear only once and a varying frequency from 1 to 19 for the rest of the tokens
+    #The probabilty is to feed to the random number generator so it generates values according to that probability definition
     probability=[350/500]
     for i in range(1,19):
         probability.append(150/(500*18))
@@ -66,7 +72,8 @@ def generate_training_batches(batch_size,number_of_documents_to_generate,vocab_s
         
         document_frequency_batch=np.array(np.random.choice(np.arange(1,20),size=500,replace=True,p=probability),dtype=np.int32)
 #         document_frequency_batch=np.array(np.random.choice(np.arange(1,20),size=500,replace=True,p=probability),dtype=np.float32)
-
+        
+        #We want the sparse tensor indices in the fomat (ID in the batch, token ID) and values are frequencies of each token
         label_batch=np.array(np.random.randint(2),dtype=np.float32)
         for i in range(1,batch_size):
             new_document_indices=np.random.choice(np.arange(1, vocab_size), size=500, replace=False, p=None)
@@ -76,6 +83,7 @@ def generate_training_batches(batch_size,number_of_documents_to_generate,vocab_s
             document_frequency_batch=np.append(document_frequency_batch,np.random.choice(np.arange(1,20),size=500,replace=True,p=probability))
             label_batch=np.append(label_batch,np.random.randint(2))
         document_batch = tf.SparseTensor(indices=document_indices_batch, values=document_frequency_batch, dense_shape=[batch_size,vocab_size])
+        #While creating the sparse tensor there is no order of elements according to their indices. We need to reorder it first before
         document_batch = tf.sparse.reorder(document_batch)
         document_batch=tf.sparse.to_dense(document_batch)                                                
         pos+=batch_size
@@ -91,7 +99,7 @@ def main():
     parser.add_argument('-r', '--reduction_rate', nargs="?", type=float, default=0.2)
     args = parser.parse_args()
     start0=time.time()
-    
+    #Adding this will enable us to see each operation done if it was don on GPU or on CPU
     tf.debugging.set_log_device_placement(True)
 
     #Generating the embedding matrix
@@ -145,14 +153,14 @@ def main():
         # test_accuracy.reset_states()
 
         #Using a generator to generate batches
-        for document_batch,label_batch in generate_training_batches(batch_size=64,number_of_documents_to_generate=100000,vocab_size=vocab_size):
+        for document_batch,label_batch in generate_training_batches(batch_size=64,number_of_documents_to_generate=2400000,vocab_size=vocab_size):
             with tf.device('/GPU:0'):
                 train_step(document_batch,label_batch)
-
-                print(f'Epoch {epoch + 1}, '
+        print(f'Epoch {epoch + 1}, '
                     f'Loss: {train_loss.result()}, '
                     f'Accuracy: {train_accuracy.result() *100}'
-                ,flush=True)
+                    ,flush=True)
+
     end=time.time()
     print("Time for training =",round(end-start),flush=True)
     print("Total time = ",round(end-start0),flush=True)

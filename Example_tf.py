@@ -12,21 +12,26 @@ class Example(Model):
     def __init__(self,embedding_matrix):
         super(Example,self).__init__()
         self.vocab_size, self.embedding_dim = embedding_matrix.shape
+        #We chose to using an embedding layer that is not trainable and that have fixed embeddings for each word in the vocabulary. We also set mask_zero to true so the model knows that the value 0 is a padding value and will ignore it
         self.embedding_layer=Embedding(input_dim=self.vocab_size,output_dim=self.embedding_dim,embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),trainable=False,mask_zero=True)
         self.average_pooling=GlobalAveragePooling1D()
         self.dense_layer=Dense(1,bias_initializer='zeros',activation='softmax')
         
     def call(self,documents):
         print("Shape of documents batch=",documents.shape,flush=True)
+        #Computing the embeddings for each token in the documents. Shape should be (batch_size;length of document,emnedding dimension
         documents=self.embedding_layer(documents)
         print("Shape of  documents batch after embedding layer=",documents.shape,flush=True)
+        #Average the embedding dimensions according for tokens in a document. Shape should be (batch size, embedding dimension)
         documents=self.average_pooling(documents)
         print("Shape of  documents batch after average pooling layer=",documents.shape,flush=True)
+        #Through the dense layer we get a value for each document in the batch from which we will predict the class.Shape should be (batch_size,1)
         documents_class=self.dense_layer(documents)
         print("Shape of documents batch class after dense layer,document_class=",documents_class.shape,flush=True)
 
         return documents_class
 def load_vocabulary(file_path):
+    #Loading the vocabulary of the collection Wikir which was saved using the Pickle module
     vocabulary=dict()
     with open(file_path + '/vocabulary', 'rb') as f:
         vocabulary = pickle.load(f)
@@ -35,6 +40,7 @@ def reduce_vocabulary_and_compute_fasttext_embeddings(file_path,fasttext_model_p
     #reducing the size of the vocabulary
     vocabulary=load_vocabulary(file_path)
     number_of_elements_to_keep=round(proportion_of_vocabulary_to_keep*len(vocabulary))
+    #Each token for the vocabulary has a value composed of [length_of_posting list,internal_token ID]. When reducing we keep only the k first elements of the vocabulary
     reduced_vocabulary={token:value[1] for token,value in vocabulary.items() if value[1]<number_of_elements_to_keep}
     del(vocabulary)
     #Computing the embedding matrix
@@ -49,14 +55,19 @@ def reduce_vocabulary_and_compute_fasttext_embeddings(file_path,fasttext_model_p
 
     return embedding_matrix,vocab_size
 def generate_training_batches(batch_size,number_of_documents_to_generate,vocab_size):
-    # Generating documents and labels
+    """This is a generator method that generates randomly documents in direct structure """
+    # Generating documents in the direct structure format and labels
     pos=0
     while(pos+batch_size<number_of_documents_to_generate):
+        #We calculate the first document and label before the loop so we can use np.append and np.vstack
+        #For the documents we pick 500 token ids from the vocabulary with replacement to simulate the direct structure document
+        #For the label we generate randomly a label 0 or 1
         document_batch=np.array(np.random.choice(np.arange(1, vocab_size), size=500, replace=True, p=None),dtype=np.int32)
         label_batch=np.array(np.random.randint(2),dtype=np.float32)
         for i in range(1,batch_size):
             document_batch=np.vstack((document_batch,np.array( np.random.choice(np.arange(1, vocab_size), size=500, replace=True, p=None),dtype=np.int32)))
             label_batch=np.append(label_batch,np.random.randint(2))
+        #Padding the documents to test if the model ignores masked elements or not
         document_batch=tf.keras.preprocessing.sequence.pad_sequences(document_batch, padding='post',maxlen=550)
         pos+=batch_size
         yield document_batch,label_batch
@@ -126,13 +137,14 @@ def main():
 
         #Using a generator to generate batches
         for document_batch,label_batch in generate_training_batches(batch_size=64,number_of_documents_to_generate=2400000,vocab_size=vocab_size):
+            #Forcing tensorflow to execute this block of code on GPU
             with tf.device('/GPU:0'):
                 train_step(document_batch,label_batch)
 
-                print(f'Epoch {epoch + 1}, '
+        print(f'Epoch {epoch + 1}, '
                     f'Loss: {train_loss.result()}, '
                     f'Accuracy: {train_accuracy.result() *100}'
-                ,flush=True)
+                    ,flush=True)
     end=time.time()
     print("Time for training =",round(end-start),flush=True)
     print("Total time = ",round(end-start0),flush=True)
